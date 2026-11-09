@@ -43,6 +43,7 @@ export const labels: Record<string, string> = {
   INVALIDATED: "무효화 · 409",
   SENT: "전송 완료",
   FAILED: "전송 실패",
+  UNKNOWN: "결과 확인 필요",
   COURSE: "과정공지",
   SYSTEM: "시스템공지",
   FAQ: "FAQ",

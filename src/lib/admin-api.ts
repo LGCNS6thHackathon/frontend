@@ -113,8 +113,10 @@ export function createAdminApi(
           collection(resource, parent) +
             (resource === "questions" ? "" : `?size=100&page=${page}`),
         );
-        if (Array.isArray(result))
-          return result.map((row) => normalize(resource, row));
+        if (Array.isArray(result)) {
+          all.push(...result);
+          break;
+        }
         const rows =
           resource === "questions"
             ? result.questions || []
@@ -138,7 +140,7 @@ export function createAdminApi(
         units: "subjectId",
         topics: "unitId",
       };
-      return detailed
+      const normalized = detailed
         .map((row) => normalize(resource, row))
         .filter(
           (row) =>
@@ -146,6 +148,22 @@ export function createAdminApi(
             !parentField[resource] ||
             row[parentField[resource]!] === parent,
         );
+      if (resource !== "posts" || !normalized.length) return normalized;
+      try {
+        const statuses = await request<Record<string, string>>(
+          `/api/cohorts/${cohortId}/discord-deliveries`,
+        );
+        if (!statuses || typeof statuses !== "object" || Array.isArray(statuses))
+          throw Error("Invalid Discord status response");
+        return normalized.map(row => ({ ...row,
+          deliveryStatus: statuses[String(row.id)] == null ? null :
+            ["PENDING", "SENT", "FAILED"].includes(statuses[String(row.id)])
+              ? statuses[String(row.id)] : "UNKNOWN",
+        }));
+      } catch {
+        // A failed lookup must never make a previously sent notice appear unsent.
+        return normalized.map(row => ({ ...row, deliveryStatus: "UNKNOWN" }));
+      }
     },
     async save(
       resource: Resource,

@@ -40,6 +40,7 @@ import {
 } from "@/lib/admin-model";
 import { useSession, SessionToolbar } from "@/components/live/session";
 import { api as sessionApi, downloadFile, FileInfo } from "@/lib/api-client";
+import { sendDiscord, DeliveryStatus } from "@/lib/discord-delivery";
 import { ApiError, createAdminApi } from "@/lib/admin-api";
 const icons = [
   Users,
@@ -109,9 +110,13 @@ export default function AdminPortal() {
   const [settings, setSettings] = useState(false);
   const [baseUrl] = useState("");
   const [token] = useState("");
+  const deliveryLocks = useRef(new Set<string>());
+  const [deliveryOverrides, setDeliveryOverrides] = useState<Record<string, DeliveryStatus>>({});
   const [apiRows, setApiRows] = useState<Row[]>([]);
   const [loadError, setLoadError] = useState("");
   const loadVersion = useRef(0);
+  const currentView = useRef({ cohort, resource: panel.resource, parent: panel.parent });
+  currentView.current = { cohort, resource: panel.resource, parent: panel.parent };
   const [reportTarget, setReportTarget] = useState(0);
   const [reportRows, setReportRows] = useState<Row[]>([]);
   const [reportError, setReportError] = useState("");
@@ -266,7 +271,7 @@ export default function AdminPortal() {
           columns: configs[r].columns.filter(
             (key) =>
               !(
-                r === "posts" && ["visibility", "deliveryStatus"].includes(key)
+                r === "posts" && ["visibility"].includes(key)
               ) &&
               !(r === "questions" && ["topicId", "chapterId"].includes(key)),
           ),
@@ -284,7 +289,11 @@ export default function AdminPortal() {
     );
   const rows = (
     mode === "api"
-      ? apiRows
+      ? apiRows.map(row => {
+          const local = deliveryOverrides[`${cohort}:${row.id}`];
+          return r === "posts" && local && !["SENT", "FAILED"].includes(String(row.deliveryStatus))
+            ? { ...row, deliveryStatus: local } : row;
+        })
       : active(r).filter(
           (x) => !config.parent || x[config.parent] === panel.parent,
         )
@@ -353,7 +362,7 @@ export default function AdminPortal() {
     )
       return v ? (
         <span
-          className={`admin-badge ${["INVALIDATED", "FAILED", "ABSENT", "REJECTED"].includes(String(v)) ? "warning" : ["ACTIVE", "APPROVED", "PRESENT", "SENT", "REVIEWED"].includes(String(v)) ? "success" : ""}`}
+          className={`admin-badge ${["INVALIDATED", "FAILED", "UNKNOWN", "ABSENT", "REJECTED"].includes(String(v)) ? "warning" : ["ACTIVE", "APPROVED", "PRESENT", "SENT", "REVIEWED"].includes(String(v)) ? "success" : ""}`}
         >
           {labels[String(v)] || v}
         </span>
@@ -417,6 +426,7 @@ export default function AdminPortal() {
   async function refresh(resource = r, parent = panel.parent) {
     if (mode === "api") {
       const rows = await api.list(resource, parent);
+      if (currentView.current.cohort !== cohort || currentView.current.resource !== resource || currentView.current.parent !== parent) return;
       setApiRows(rows);
       setApiStore((current) => ({
         ...current,
@@ -708,8 +718,25 @@ export default function AdminPortal() {
     });
   }
   async function delivery(row: Row) {
+    if (mode === "api") {
+      const key = `${cohort}:${row.id}`;
+      if (deliveryLocks.current.has(key) || row.deliveryStatus || deliveryOverrides[key]) return;
+      deliveryLocks.current.add(key);
+      setDeliveryOverrides(current => ({ ...current, [key]: "PENDING" }));
+      await run(async () => {
+        const status = await sendDiscord(api.request, row.id);
+        setDeliveryOverrides(current => ({ ...current, [key]: status }));
+        try { await refresh(); } catch {
+          notify("목록을 갱신하지 못했습니다. 전송 결과를 확인해 주세요.", true);
+        }
+        notify(status === "SENT" ? "Discord 공지 채널에 게시했습니다." :
+          status === "UNKNOWN" ? "전송 결과를 확인할 수 없습니다. Discord 채널을 확인해 주세요. 자동 재전송하지 않습니다." :
+          "전송 결과를 확인해 주세요. 중복 방지를 위해 재전송이 제한됩니다.", status !== "SENT");
+      });
+      deliveryLocks.current.delete(key);
+      return;
+    }
     await run(async () => {
-      if (mode === "api") throw Error(UNAVAILABLE_MESSAGE);
       if (row.deliveryStatus === "SENT" || row.deliveryStatus === "PENDING")
         throw Error(
           "중복 전송을 방지했습니다. 동일 공지는 한 번만 전송됩니다.",
@@ -821,9 +848,8 @@ export default function AdminPortal() {
             }
             {r === "posts" && (
               <>
-                {mode === "mock" &&
-                  ["COURSE", "SYSTEM"].includes(String(row.category)) && (
-                    <button onClick={() => delivery(row)}>
+                {["COURSE", "SYSTEM"].includes(String(row.category)) && (
+                    <button disabled={mode === "api" && (busy || !!row.deliveryStatus)} onClick={() => delivery(row)}>
                       {row.deliveryStatus === "FAILED"
                         ? "재시도"
                         : "Discord 전송"}
@@ -1193,7 +1219,8 @@ export default function AdminPortal() {
             )}
             {mode === "api" && r === "posts" && (
               <div className="admin-note">
-                공개 범위·공개 링크·Discord 전송은 현재 제공되지 않습니다.
+                Discord 전송 버튼을 누르면 제목과 본문 전문이 외부 Discord 채널로 전달됩니다. 저장만으로는 전송되지 않습니다.
+                공개 범위·공개 링크 설정은 제공되지 않습니다.
                 게시글과 첨부는 기수 회원용으로 관리합니다.
               </div>
             )}

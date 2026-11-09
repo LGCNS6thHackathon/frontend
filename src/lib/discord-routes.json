@@ -1,0 +1,4 @@
+{
+  "/api/posts/{postId}/discord-delivery": ["get", "post"],
+  "/api/cohorts/{cohortId}/discord-deliveries": ["get"]
+}

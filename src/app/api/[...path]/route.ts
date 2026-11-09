@@ -1,3 +1,4 @@
+import discordRoutes from "@/lib/discord-routes.json";
 import backendRoutes from "@/lib/backend-routes.json";
 import { IS_MOCK } from "@/lib/data-mode";
 import { NextRequest, NextResponse } from "next/server";
@@ -49,7 +50,7 @@ async function proxy(
     );
   const { path } = await context.params;
   const pathname = "/api/" + path.join("/");
-  const known = Object.entries(backendRoutes).some(([template, methods]) => {
+  const known = Object.entries({ ...backendRoutes, ...discordRoutes }).some(([template, methods]) => {
     const pattern = template
       .split("/")
       .map((segment) => (segment.startsWith("{") ? "[^/]+" : segment))
