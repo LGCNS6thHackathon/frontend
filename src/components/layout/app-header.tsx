@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   ExternalLink,
   Menu,
@@ -94,6 +95,7 @@ export function AppHeader({
 
       {/* Right: Quick Action Buttons (High-Quality ZEP & Seat Departure Detection) */}
       <div className="flex items-center gap-2.5">
+        <Link href="/admin" className="rounded-lg border border-border bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground whitespace-nowrap">관리자 모드 ↗</Link>
         {/* High-End Official ZEP Button */}
         <button
           onClick={() => window.open(TODAY_SCHEDULE.zepUrl, "_blank")}
