@@ -263,28 +263,33 @@ export function HomeView({ onNavigate }: HomeViewProps) {
                 >
                   <div className="space-y-1 max-w-xl">
                     <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          notice.category === "필독"
-                            ? "destructive"
-                            : notice.category === "공지"
-                            ? "default"
-                            : notice.category === "자료"
-                            ? "secondary"
-                            : "outline"
-                        }
-                        className="text-[10px] px-1.5 py-0 h-4"
-                      >
-                        {notice.category}
-                      </Badge>
-                      <h4 className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                      {notice.category === "필독" ? (
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/50">
+                          필독
+                        </span>
+                      ) : notice.category === "공지" ? (
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-900/50">
+                          공지
+                        </span>
+                      ) : notice.category === "자료" ? (
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/50">
+                          자료
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          시스템
+                        </span>
+                      )}
+                      <h4 className="text-xs sm:text-[13px] font-semibold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1 tracking-tight">
                         {notice.title}
                       </h4>
                       {notice.isNew && (
-                        <span className="size-1.5 rounded-full bg-red-500" />
+                        <span className="px-1 py-0.2 rounded text-[9px] font-extrabold bg-rose-500 text-white shrink-0 uppercase">
+                          NEW
+                        </span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-1 pl-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 pl-0.5 leading-relaxed tracking-tight">
                       {notice.content}
                     </p>
                   </div>

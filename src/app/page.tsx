@@ -28,20 +28,29 @@ export default function LmsPortalPage() {
       }
 
       // Check URL query param ?tab=...
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get("tab") as NavTabId;
-      if (tabParam && [
-        "home",
-        "schedule",
-        "notices",
-        "qa",
-        "evaluation",
-        "assignment",
-        "ai-review",
-        "mypage",
-      ].includes(tabParam)) {
-        setCurrentTab(tabParam);
-      }
+      const syncTabFromUrl = () => {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get("tab") as NavTabId;
+        if (
+          tabParam &&
+          [
+            "home",
+            "schedule",
+            "notices",
+            "qa",
+            "evaluation",
+            "assignment",
+            "ai-review",
+            "mypage",
+          ].includes(tabParam)
+        ) {
+          setCurrentTab(tabParam);
+        }
+      };
+
+      syncTabFromUrl();
+      window.addEventListener("popstate", syncTabFromUrl);
+      return () => window.removeEventListener("popstate", syncTabFromUrl);
     }
   }, []);
 
@@ -123,12 +132,11 @@ export default function LmsPortalPage() {
         {/* Global Footer */}
         <footer className="border-t py-5 bg-card/30 text-center text-xs text-muted-foreground">
           <div className="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p>© 2026 LG CNS AM Inspire Camp 6기. 차세대 수강생 LMS 포털 v2.0.</p>
+            <p>© 2026 LG CNS AM Inspire Camp 6기. 차세대 수강생 LMS 포털</p>
             <div className="flex items-center gap-4 text-[11px]">
               <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                ● 시스템 정상 가동 중 (12ms)
+                ● 서버 상태 (3ms)
               </span>
-              <span>Next.js 15.5 + Tailwind v4 + shadcn</span>
             </div>
           </div>
         </footer>
