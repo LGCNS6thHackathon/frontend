@@ -5,6 +5,8 @@ import { ArrowUpRight, BookOpen, Check, ChevronRight, ClipboardCheck, Graduation
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { configs, columnLabels, Field, menus } from './config';
 import { labels, Resource, Row, seed, Store, today, transitions, youtubeId } from '@/lib/admin-model';
+import {useSession, SessionToolbar} from '@/components/live/session';
+import {api as sessionApi, downloadFile, FileInfo} from '@/lib/api-client';
 import { ApiError, createAdminApi } from '@/lib/admin-api';
 const icons = [Users, ClipboardCheck, MessageSquare, Video, BookOpen, GraduationCap];
 function emptyStore(): Store { const store = seed(); for (const key of Object.keys(store) as Resource[])
@@ -29,6 +31,7 @@ type Toast = {
 };
 const time = (v: unknown) => v ? new Date(String(v)).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
 export default function AdminPortal() {
+    const session=useSession();
     const [isDark, setIsDark] = useState(false);
     const [mockStore, setStore] = useState<Store>(seed);
     const [apiStore, setApiStore] = useState<Store>(() => emptyStore());
@@ -38,21 +41,22 @@ export default function AdminPortal() {
     const [editor, setEditor] = useState<Editor | null>(null);
     const [draft, setDraft] = useState<Row>({ id: 0 });
     const [file, setFile] = useState<File | null>(null);
-    const [cohort, setCohort] = useState(1);
+    const [cohort, setCohort] = useState(session.cohort?.id||0);
     const [query, setQuery] = useState('');
     const [filter, setFilter] = useState('');
     const [empty, setEmpty] = useState(false);
     const [toasts, setToasts] = useState<Toast[]>([]);
     const [busy, setBusy] = useState(false);
-    const [mode, setMode] = useState<'mock' | 'api'>('mock');
+    const [mode, setMode] = useState<'mock' | 'api'>('api');
     const [settings, setSettings] = useState(false);
-    const [baseUrl, setBaseUrl] = useState('http://localhost:8080');
-    const [token, setToken] = useState('');
+    const [baseUrl] = useState('');
+    const [token] = useState('');
     const [apiRows, setApiRows] = useState<Row[]>([]);
     const [loadError, setLoadError] = useState('');
     const loadVersion = useRef(0);
     const store = mode === 'mock' ? mockStore : apiStore;
     const api = createAdminApi(baseUrl, token, cohort);
+    useEffect(()=>{if(mode==='api'&&session.cohort?.id)setCohort(session.cohort.id);},[session.cohort?.id,mode]);
     const notify = (text: string, error = false) => { const id = Date.now() + Math.random(); setToasts(t => [...t.slice(-3), { id, text, error }]); window.setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 6500); };
     useEffect(() => { const dark = document.documentElement.classList.contains('dark') || window.matchMedia('(prefers-color-scheme: dark)').matches; setIsDark(dark); document.documentElement.classList.toggle('dark', dark); }, []);
     useEffect(() => { try {
@@ -70,7 +74,7 @@ export default function AdminPortal() {
         }
         catch { } }, [mockStore, ready]);
     useEffect(() => { if (mode !== 'api')
-        return; let cancelled = false; setApiStore(emptyStore()); const client = createAdminApi(baseUrl, token, cohort); const resources: Resource[] = ['users', 'cohorts', 'enrollments', 'assignments', 'assessments']; Promise.allSettled(resources.map(resource => client.list(resource))).then(results => { if (cancelled)
+        return; let cancelled = false; setApiStore(emptyStore()); const client = createAdminApi(baseUrl, token, cohort); const resources: Resource[] = ['courses','events','users', 'cohorts', 'enrollments', 'assignments', 'assessments','videos','chapters','subjects','units','topics','corrections']; Promise.allSettled(resources.map(resource => client.list(resource))).then(results => { if (cancelled)
         return; setApiStore(current => { const next = { ...current }; results.forEach((result, i) => { if (result.status === 'fulfilled')
         next[resources[i]] = result.value.map(row => ({ ...row, cohortId: row.cohortId ?? cohort })); }); return next; }); }); return () => { cancelled = true; }; }, [mode, baseUrl, token, cohort]);
     // API reads are scoped to the active resource. Failures never fall back to demo data.
@@ -84,7 +88,7 @@ export default function AdminPortal() {
     function navigate(resource: Resource, parent?: number, parentLabel?: string) { setPanel({ resource, parent, parentLabel }); setQuery(''); setFilter(''); setEmpty(false); }
     const r = panel.resource;
     const config = configs[r];
-    const active = (resource: Resource) => store[resource].filter(x => !x.deletedAt && (resource === 'users' || resource === 'cohorts' || x.cohortId === cohort));
+    const active = (resource: Resource) => store[resource].filter(x => !x.deletedAt && (resource === 'users' || resource === 'cohorts' || resource==='courses' || x.cohortId === cohort));
     const rows = (mode === 'api' ? apiRows : active(r).filter(x => !config.parent || x[config.parent] === panel.parent)).filter(x => !empty && (!filter || Object.values(x).includes(filter)) && (!query || Object.values(x).some(v => String(v ?? '').toLowerCase().includes(query.toLowerCase()))));
     const userName = (id: unknown) => store.users.find(x => x.id === Number(id))?.name || `회원 #${id}`;
     function topicPath(id: unknown) { const topic = store.topics.find(x => x.id === Number(id)); const unit = store.units.find(x => x.id === topic?.unitId); const subject = store.subjects.find(x => x.id === unit?.subjectId); return topic ? `${subject?.title || ''} / ${unit?.title || ''} / ${topic.title}` : '단원 미분류'; }
@@ -95,7 +99,7 @@ export default function AdminPortal() {
         return `${video?.lectureDate} · ${video?.periodNo}교시 · ${row.title} (${row.startSeconds}초)`;
     } return String(row.title || row.name); }
     function cell(row: Row, key: string) { const v = row[key] ?? (key === 'date' ? row.attendanceDate : undefined); if (['userId', 'authorId', 'provisionedBy'].includes(key))
-        return v ? (key === 'userId' && row.userName ? row.userName : userName(v)) : '기록 없음'; if (['provisionedAt', 'submittedAt', 'dueAt'].includes(key))
+        return v ? (key === 'userId' && row.userName ? row.userName : userName(v)) : '기록 없음'; if (['provisionedAt', 'submittedAt', 'dueAt','startAt','endAt'].includes(key))
         return time(v); if (key === 'topicId')
         return topicPath(v); if (key === 'chapterId')
         return v ? store.chapters.find(x => x.id === v)?.title || '챕터 없음' : '연결된 복습 영상 없음'; if (key === 'pinned')
@@ -118,8 +122,7 @@ export default function AdminPortal() {
     finally {
         setBusy(false);
     } }
-    async function refresh(resource = r, parent = panel.parent) { if (mode === 'api')
-        setApiRows(await api.list(resource, parent)); }
+    async function refresh(resource = r, parent = panel.parent) { if(mode==='api'){const rows=await api.list(resource,parent);setApiRows(rows);setApiStore(current=>({...current,[resource]:rows.map(row=>({...row,cohortId:row.cohortId??cohort}))}));await session.reload();} }
     function validate(resource: Resource, data: Row, original?: Row) {
         if (resource === 'users') {
             if (editor?.isNew && store.users.some(x => x.email === data.email))
@@ -131,7 +134,7 @@ export default function AdminPortal() {
         }
         if (resource === 'cohorts' && String(data.endDate) < String(data.startDate))
             throw Error('종료일은 시작일 이후여야 합니다.');
-        if (resource === 'enrollments' && store.enrollments.some(x => x.cohortId === cohort && x.userId === data.userId))
+        if (resource === 'enrollments' && store.enrollments.some(x => x.id!==data.id && x.cohortId === cohort && x.userId === data.userId))
             throw Error('이미 배정된 회원입니다. (409)');
         if (resource === 'attendance') {
             if (String(data.date) > today())
@@ -181,9 +184,9 @@ export default function AdminPortal() {
             }
             if (resource === 'assessments' && isNew)
                 data.status = 'DRAFT';
-            if (resource === 'comments')
-                data.authorId = 1;
-            if (resource === 'enrollments')
+            if (resource === 'comments' && mode==='mock')
+                data.authorId = session.user.id;
+            if (resource === 'enrollments' && isNew)
                 data.status = 'ACTIVE';
             if (resource === 'attendance') {
                 const existing = store.attendance.find(x => !x.deletedAt && x.cohortId === cohort && x.userId === data.userId && x.date === data.date && x.sessionNo === data.sessionNo);
@@ -195,7 +198,8 @@ export default function AdminPortal() {
             if (resource === 'submissions')
                 data.status = 'REVIEWED';
             if (mode === 'api') {
-                const result = await api.save(resource, data, isNew, parent);
+                const result = await api.save(resource, data, isNew, parent,editor.row);
+                if(data.fileName===null && editor.row.fileIds){for(const id of JSON.parse(String(editor.row.fileIds)))await api.request(`/api/files/${id}`,'DELETE');}
                 if (file && (resource === 'posts' || resource === 'assignments')) {
                     try {
                         await api.upload(resource, result.id, file);
@@ -259,8 +263,7 @@ export default function AdminPortal() {
             patch('attendance', attendance.id, { status: row.requestedStatus, version: Number(attendance.version) + 1 });
         patch('corrections', row.id, { status });
     } notify(`소명 요청을 ${status === 'APPROVED' ? '승인' : '반려'}했습니다.`); }); }
-    async function delivery(row: Row) { await run(async () => { if (mode === 'api')
-        throw Error('Discord 전송 API는 아직 구현되지 않았습니다.'); if (row.deliveryStatus === 'SENT' || row.deliveryStatus === 'PENDING')
+    async function delivery(row: Row) { await run(async () => { if(mode==='api'){const result=await api.request<{status:string;errorCode?:string}>(`/api/posts/${row.id}/discord`,'POST',{});await refresh();if(result.status==='FAILED')throw Error(result.errorCode==='DISCORD_NOT_CONFIGURED'?'서버에 Discord Webhook이 설정되어 있지 않습니다.':'Discord 전송에 실패했습니다. 전송 이력을 확인하고 재시도하세요.');notify('Discord 공지 전송을 완료했습니다.');return;} if (row.deliveryStatus === 'SENT' || row.deliveryStatus === 'PENDING')
         throw Error('중복 전송을 방지했습니다. 동일 공지는 한 번만 전송됩니다.'); if (row.visibility !== 'PUBLIC' || !row.publicSlug)
         throw Error('공개 범위 PUBLIC 및 공개 링크를 먼저 설정해 주세요.'); patch('posts', row.id, { deliveryStatus: 'PENDING' }); notify('Discord 전송 대기 중입니다. 중복 요청은 차단됩니다.'); window.setTimeout(() => { patch('posts', row.id, { deliveryStatus: 'SENT' }); notify('Discord 공지 채널 전송을 완료했습니다. (Mock)'); }, 1000); }); }
     async function assessment(row: Row) { await run(async () => { const status = row.status === 'DRAFT' ? 'PUBLISHED' : 'CLOSED'; if (row.status === 'CLOSED')
@@ -272,8 +275,7 @@ export default function AdminPortal() {
     else
         patch('assessments', row.id, { status }); notify(`평가를 ${status === 'PUBLISHED' ? '게시' : '종료'}했습니다.`); }); }
     function download(row: Row) { if (mode === 'api') {
-        notify('파일 메타데이터의 fileId로 다운로드 API를 연결해 주세요.', true);
-        return;
+        run(async()=>{const files=await sessionApi<FileInfo[]>(`/api/submissions/${row.id}/files`);if(!files.length)throw Error('첨부파일이 없습니다.');for(const file of files)await downloadFile(file);});return;
     } const isDataUrl = String(row.fileContent || '').startsWith('data:'); const url = isDataUrl ? String(row.fileContent) : URL.createObjectURL(new Blob([String(row.fileContent || '')], { type: 'text/plain' })); const a = document.createElement('a'); a.href = url; a.download = String(row.fileName); a.click(); if (!isDataUrl)
         URL.revokeObjectURL(url); notify('제출 파일을 다운로드했습니다.'); }
     function replay(row: Row) { const video = store.videos.find(x => x.id === row.videoId && !x.deletedAt); if (!video || video.visibility !== 'PUBLIC') {
@@ -283,7 +285,7 @@ export default function AdminPortal() {
     function actions(row: Row) {
         return <div className="admin-actions">
  {r === 'corrections' ? <><button disabled={row.status !== 'PENDING'} onClick={() => correction(row, 'APPROVED')}>승인</button><button disabled={row.status !== 'PENDING'} onClick={() => correction(row, 'REJECTED')}>반려</button>{mode === 'mock' && row.status === 'PENDING' && <button onClick={() => { patch('attendance', Number(row.attendanceId), { version: Number(row.originalVersion) + 1 }); notify('원본 버전 변경을 재현했습니다. 승인을 눌러 409 충돌을 확인하세요.'); }}>충돌 재현</button>}</> : <>
- {!(r === 'enrollments') && <button onClick={() => open(r, row)}>{r === 'submissions' ? '채점 / 수정' : '수정'}</button>}
+ {<button onClick={() => open(r, row)}>{r === 'submissions' ? '채점 / 수정' : '수정'}</button>}
  {r === 'posts' && <>{['COURSE', 'SYSTEM'].includes(String(row.category)) && <button onClick={() => delivery(row)}>{row.deliveryStatus === 'FAILED' ? '재시도' : 'Discord 전송'}</button>}{row.category === 'QUESTION' && <button onClick={() => navigate('comments', row.id, String(row.title))}>답변 관리</button>}</>}
  {r === 'videos' && <button onClick={() => navigate('chapters', row.id, String(row.title))}>소단원 관리</button>}
  {r === 'subjects' && <button onClick={() => navigate('units', row.id, String(row.title))}>단원 관리</button>}{r === 'units' && <button onClick={() => navigate('topics', row.id, String(row.title))}>개념 관리</button>}
@@ -291,7 +293,7 @@ export default function AdminPortal() {
  {r === 'assignments' && <button onClick={() => navigate('submissions', row.id, String(row.title))}>제출물 평가</button>}
  {r === 'submissions' && row.fileName && <button onClick={() => download(row)}>파일 확인 ↗</button>}
  {r === 'assessments' && <><button onClick={() => navigate('questions', row.id, String(row.title))}>문항 / 복습 연결</button><button disabled={row.status === 'CLOSED'} onClick={() => assessment(row)}>{row.status === 'DRAFT' ? '게시' : '종료'}</button></>}
- {!['users', 'cohorts', 'enrollments', 'submissions'].includes(r) && <button className="danger" onClick={() => remove(row)}>삭제</button>}
+ {!['courses','users', 'cohorts', 'enrollments', 'submissions'].includes(r) && <button className="danger" onClick={() => remove(row)}>삭제</button>}
  </>}
  </div>;
     }
@@ -303,12 +305,12 @@ export default function AdminPortal() {
  <aside className="admin-sidebar">
  <Link href="/admin" className="admin-brand"><span className="brand-symbol"><GraduationCap size={21}/></span><span>Inspire LMS <b>v2.0</b><small>LG CNS AM 캠프 6기</small></span></Link>
  <div className="admin-sidebar-nav"><p>관리자 워크스페이스</p>{menus.map((menu, i) => { const Icon = icons[i]; return <button key={menu.name} aria-current={tab === i ? 'page' : undefined} className={tab === i ? 'active' : ''} onClick={() => { setTab(i); navigate(menu.resources[0]); }}><Icon size={16}/><span>{menu.name}</span>{i === 1 && pending > 0 && <small>{pending}</small>}</button>; })}</div>
- <div className="admin-sidebar-bottom"><button onClick={() => { setIsDark(!isDark); document.documentElement.classList.toggle('dark', !isDark); }}>{isDark ? <Sun size={15}/> : <Moon size={15}/>} {isDark ? '라이트 모드' : '다크 모드'}</button><div className="admin-profile"><span>지</span><div>이지원 관리자<small>최고 관리자 · ADMIN</small></div></div></div>
- </aside><div className="admin-shell"><header className="admin-header"><div className="admin-top"><div><h1>관리자 워크스페이스</h1><p>{menus[tab].subtitle}</p></div><div className="mode-switch"><Link href="/">수강생 모드 <ArrowUpRight size={13}/></Link><span><ShieldCheck size={14}/> 관리자 모드</span></div></div>
+ <div className="admin-sidebar-bottom"><button onClick={() => { setIsDark(!isDark); document.documentElement.classList.toggle('dark', !isDark); }}>{isDark ? <Sun size={15}/> : <Moon size={15}/>} {isDark ? '라이트 모드' : '다크 모드'}</button><div className="admin-profile"><span>{session.user.name.slice(0,1)}</span><div>{session.user.name} 관리자<small>최고 관리자 · ADMIN</small></div></div></div>
+ </aside><div className="admin-shell"><SessionToolbar/><header className="admin-header"><div className="admin-top"><div><h1>관리자 워크스페이스</h1><p>{menus[tab].subtitle}</p></div><div className="mode-switch"><Link href="/">수강생 모드 <ArrowUpRight size={13}/></Link><span><ShieldCheck size={14}/> 관리자 모드</span></div></div>
  <nav aria-label="관리자 메뉴" className="admin-nav">{menus.map((menu, i) => { const Icon = icons[i]; return <button key={menu.name} aria-current={tab === i ? 'page' : undefined} className={tab === i ? 'active' : ''} onClick={() => { setTab(i); navigate(menu.resources[0]); }}><Icon size={16}/>{menu.name}</button>; })}</nav></header>
  <main className="admin-main"><div className="admin-breadcrumb">워크스페이스 <ChevronRight size={12}/> 관리자 <ChevronRight size={12}/><span>{menus[tab].name}</span></div>
- <div className="admin-page-heading"><div><p className="admin-eyebrow">ADMIN WORKSPACE</p><h1>{menus[tab].name} 관리</h1><p>{menus[tab].subtitle}를 한곳에서 관리하세요.</p></div><div className="admin-context"><span className={`admin-badge ${mode === 'mock' ? '' : 'success'}`}>{mode === 'mock' ? '● Mock 데모' : '● API 연결'}</span><button className="admin-secondary" onClick={() => setSettings(true)}>연결 설정</button><label className="sr-only" htmlFor="cohort">관리 기수</label><select id="cohort" value={cohort} onChange={e => { setCohort(Number(e.target.value)); navigate(menus[tab].resources[0]); }}>{store.cohorts.filter(x => !x.deletedAt).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div></div>
- <section className="admin-stats" aria-label="운영 요약">{[{ title: '등록 수강생', value: active('enrollments').filter(x => x.role === 'STUDENT').length, unit: '명', detail: '선택 기수 기준', icon: Users }, { title: '검토 대기 소명', value: pending, unit: '건', detail: '관리자의 확인이 필요해요', icon: ClipboardCheck }, { title: '운영 중인 과제', value: active('assignments').length, unit: '개', detail: '과제 및 제출 현황', icon: BookOpen }, { title: '등록된 강의 영상', value: active('videos').length, unit: '개', detail: '학습 아카이브', icon: Video }].map((s, i) => <div className="admin-stat" key={s.title}><div><p>{s.title}</p><strong>{mode === 'mock' ? s.value : '—'}<small>{s.unit}</small></strong><span>{s.detail}</span></div><s.icon size={21} className={`stat-icon stat-${i}`}/></div>)}</section>
+ <div className="admin-page-heading"><div><p className="admin-eyebrow">ADMIN WORKSPACE</p><h1>{menus[tab].name} 관리</h1><p>{menus[tab].subtitle}를 한곳에서 관리하세요.</p></div><div className="admin-context"><span className={`admin-badge ${mode === 'mock' ? '' : 'success'}`}>{mode === 'mock' ? '● Mock 데모' : '● API 연결'}</span><button className="admin-secondary" onClick={() => setSettings(true)}>연결 설정</button><label className="sr-only" htmlFor="cohort">관리 기수</label><select id="cohort" value={cohort} onChange={e => { setCohort(Number(e.target.value)); session.selectCohort(Number(e.target.value)); navigate(menus[tab].resources[0]); }}>{store.cohorts.filter(x => !x.deletedAt).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div></div>
+ <section className="admin-stats" aria-label="운영 요약">{[{ title: '등록 수강생', value: active('enrollments').filter(x => x.role === 'STUDENT').length, unit: '명', detail: '선택 기수 기준', icon: Users }, { title: '검토 대기 소명', value: pending, unit: '건', detail: '관리자의 확인이 필요해요', icon: ClipboardCheck }, { title: '운영 중인 과제', value: active('assignments').length, unit: '개', detail: '과제 및 제출 현황', icon: BookOpen }, { title: '등록된 강의 영상', value: active('videos').length, unit: '개', detail: '학습 아카이브', icon: Video }].map((s, i) => <div className="admin-stat" key={s.title}><div><p>{s.title}</p><strong>{s.value}<small>{s.unit}</small></strong><span>{s.detail}</span></div><s.icon size={21} className={`stat-icon stat-${i}`}/></div>)}</section>
  <section className="admin-workarea"><div className="admin-subnav">{menus[tab].resources.map(resource => <button className={r === resource ? 'active' : ''} key={resource} onClick={() => navigate(resource)}>{configs[resource].title}</button>)}{!menus[tab].resources.some(x => x === r) && <span className="active child-tab">{config.title}</span>}</div>
  <div className="admin-section-heading"><div>{panel.parentLabel && <p className="parent-label">{panel.parentLabel} <ChevronRight size={12}/></p>}<h2>{config.title}<span>{rows.length}</span></h2><p>{config.description}</p></div>{!config.noCreate && <button className="admin-primary" disabled={busy || locked} onClick={() => open(r)}><Plus size={16}/>{config.singular} {r === 'users' ? '발급' : '등록'}</button>}</div>
  {locked && <div className="admin-note">게시·종료된 평가의 문항은 수정할 수 없습니다. 정답·해설·복습 링크는 수강생의 응시 완료와 평가 종료 후 공개됩니다.</div>}
@@ -328,6 +330,6 @@ export default function AdminPortal() {
         return;
     } setFile(next || null); }}/>{draft.fileName && <small>기존 첨부: {draft.fileName} <button type="button" onClick={() => { setDraft({ ...draft, fileName: null, fileContent: null }); notify('첨부 제거를 예약했습니다. 저장하면 반영됩니다.'); }}>첨부 제거</button></small>}</> : <input type={f.type || 'text'} required={!f.optional} min={f.min} max={f.max} minLength={f.type === 'password' ? 8 : undefined} value={String(draft[f.key] ?? '')} onChange={e => setDraft({ ...draft, [f.key]: e.target.value })}/>}</label>)}</div>{editor?.resource === 'submissions' && <div className="admin-note">제출 내용: {draft.body}<br />최종 업로드: {time(draft.submittedAt)}{draft.status === 'REVIEWED' && <p>채점 완료 · 학생 수정 잠금</p>}</div>}{editor?.resource === 'questions' && draft.chapterId && <button type="button" className="admin-secondary" onClick={() => { const chapter = store.chapters.find(x => x.id === Number(draft.chapterId)); if (chapter)
         replay(chapter); }}>연결된 복습 구간 미리보기 ↗</button>}<div className="admin-form-footer"><button type="button" className="admin-secondary" onClick={() => setEditor(null)} disabled={busy}>취소</button><button className="admin-primary" disabled={busy}>{busy ? <Loader2 size={16} className="animate-spin"/> : <Check size={16}/>}저장하기</button></div></form></DialogContent></Dialog>
- <Dialog open={settings} onOpenChange={setSettings}><DialogContent className="admin-dialog sm:max-w-lg"><DialogTitle>데이터 연결 설정</DialogTitle><DialogDescription>기본 Mock 모드에서 모든 기능을 시연할 수 있습니다. API 모드에서는 백엔드 인증과 CORS 설정이 필요합니다.</DialogDescription><label>데이터 소스<select value={mode} onChange={e => setMode(e.target.value as 'mock' | 'api')}><option value="mock">Mock · 브라우저 저장</option><option value="api">백엔드 API</option></select></label><label>API 기본 주소<input value={baseUrl} onChange={e => setBaseUrl(e.target.value)}/></label><label>관리자 액세스 토큰<input type="password" autoComplete="off" value={token} onChange={e => setToken(e.target.value)}/></label><p className="admin-note">토큰은 메모리에만 보관합니다. 영상·커리큘럼·Discord·문항 복습 매핑 API는 백엔드 구현 대기 중입니다.</p><button className="admin-secondary" onClick={() => { setStore(seed()); notify('Mock 데이터를 초기화했습니다.'); }}>Mock 데이터 초기화</button><button className="admin-primary" onClick={() => { setSettings(false); notify(`${mode === 'mock' ? 'Mock' : 'API'} 모드를 적용했습니다.`); }}>설정 완료</button></DialogContent></Dialog>
+ <Dialog open={settings} onOpenChange={setSettings}><DialogContent className="admin-dialog sm:max-w-lg"><DialogTitle>데이터 연결 설정</DialogTitle><DialogDescription>기본 API 모드에서 실제 서버 데이터를 사용합니다. Mock 모드는 별도 시연용입니다.</DialogDescription><label>데이터 소스<select value={mode} onChange={e => setMode(e.target.value as 'mock' | 'api')}><option value="mock">Mock · 브라우저 저장</option><option value="api">백엔드 API</option></select></label><p className="admin-note">로그인한 관리자 세션으로 같은 출처의 /api 경로를 사용합니다. 서버 연결 주소는 BACKEND_URL 환경변수로 설정합니다.</p><button className="admin-secondary" onClick={() => { setStore(seed()); notify('Mock 데이터를 초기화했습니다.'); }}>Mock 데이터 초기화</button><button className="admin-primary" onClick={() => { setSettings(false); notify(`${mode === 'mock' ? 'Mock' : 'API'} 모드를 적용했습니다.`); }}>설정 완료</button></DialogContent></Dialog>
  </div></div>;
 }

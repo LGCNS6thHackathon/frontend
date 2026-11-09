@@ -11,7 +11,7 @@ import {
 import { ZepIcon } from "@/components/icons/zep-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TODAY_SCHEDULE } from "@/lib/lms-data";
+import { useSession } from "@/components/live/session";
 import { NavTabId } from "./app-sidebar";
 
 interface HeaderProps {
@@ -62,6 +62,7 @@ export function AppHeader({
   onOpenMobileMenu,
 }: HeaderProps) {
   const current = TAB_TITLES[currentTab];
+  const {cohort,user,notify}=useSession();
 
   return (
     // Non-sticky header: DOES NOT follow when scrolling
@@ -98,10 +99,10 @@ export function AppHeader({
 
       {/* Right: Quick Action Buttons (High-Quality ZEP & Seat Departure Detection) */}
       <div className="flex items-center gap-2.5">
-        <Link href="/admin" className="rounded-lg border border-border bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground whitespace-nowrap">관리자 모드 ↗</Link>
+        {user.role === "ADMIN" && <Link href="/admin" className="rounded-lg border border-border bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground whitespace-nowrap">관리자 모드 ↗</Link>}
         {/* High-End Official ZEP Button */}
         <button
-          onClick={() => window.open(TODAY_SCHEDULE.zepUrl, "_blank")}
+          onClick={() => cohort?.classroomUrl ? window.open(cohort.classroomUrl, '_blank', 'noopener,noreferrer') : notify('기수에 등록된 강의실 주소가 없습니다.',true)}
           className="group relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-[#6758FF] via-[#5c4cff] to-[#4e3dff] hover:from-[#5747ee] hover:to-[#4332ee] shadow-sm shadow-[#6758FF]/30 hover:shadow-md hover:shadow-[#6758FF]/40 border border-white/20 active:scale-[0.98] transition-all cursor-pointer"
         >
           <div className="flex size-4 items-center justify-center rounded bg-white/20 p-0.5 text-white group-hover:scale-110 transition-transform">
@@ -116,7 +117,7 @@ export function AppHeader({
           variant="outline"
           size="sm"
           className="gap-1.5 text-xs h-8 font-semibold border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-          onClick={() => window.open(TODAY_SCHEDULE.detectUrl, "_blank")}
+          onClick={() => notify('자리이탈감지 서비스는 백엔드에 연결되어 있지 않습니다.',true)}
         >
           <ShieldAlert className="size-3.5 text-amber-500" />
           <span>자리이탈감지</span>

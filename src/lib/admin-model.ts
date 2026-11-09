@@ -2,7 +2,7 @@ export type Row = {
     id: number;
     [key: string]: string | number | boolean | null | undefined;
 };
-export type Resource = 'users' | 'cohorts' | 'enrollments' | 'attendance' | 'corrections' | 'posts' | 'comments' | 'videos' | 'chapters' | 'subjects' | 'units' | 'topics' | 'assignments' | 'submissions' | 'assessments' | 'questions';
+export type Resource = 'courses' | 'events' | 'users' | 'cohorts' | 'enrollments' | 'attendance' | 'corrections' | 'posts' | 'comments' | 'videos' | 'chapters' | 'subjects' | 'units' | 'topics' | 'assignments' | 'submissions' | 'assessments' | 'questions';
 export type Store = Record<Resource, Row[]>;
 export const labels: Record<string, string> = { ADMIN: '관리자', INSTRUCTOR: '강사', MANAGER: '매니저', STUDENT: '수강생', ACTIVE: '활성', DISABLED: '비활성', INACTIVE: '비활성', SUSPENDED: '정지', PRESENT: '출석', LATE: '지각', ABSENT: '결석', EXCUSED: '공결', LEAVE: '휴가', EARLY: '조퇴', PENDING: '대기', APPROVED: '승인', REJECTED: '반려', INVALIDATED: '무효화 · 409', SENT: '전송 완료', FAILED: '전송 실패', COURSE: '과정공지', SYSTEM: '시스템공지', FAQ: 'FAQ', QUESTION: '학습질문', COHORT: '기수 공개', PUBLIC: '공개', PRIVATE: '비공개', DRAFT: '초안', PUBLISHED: '게시 중', CLOSED: '종료', DATE: '일자', SESSION: '회차', SUBMITTED: '제출 완료', REVIEWED: '채점 완료' };
 export const transitions = ['ABSENT>LATE', 'ABSENT>PRESENT', 'LATE>PRESENT', 'EXCUSED>PRESENT', 'LEAVE>PRESENT', 'EARLY>PRESENT'];
@@ -19,6 +19,7 @@ catch {
 } }
 export function seed(): Store {
     return {
+        courses: [{id:1,title:"AM Inspire Camp",description:"교육 과정",totalHours:960}],events:[],
         users: [{ id: 1, name: '이지원', email: 'jiwon@inspire.camp', role: 'ADMIN', status: 'ACTIVE', provisionedBy: null, provisionedAt: null }, { id: 2, name: '김도윤', email: 'doyun@inspire.camp', role: 'STUDENT', status: 'ACTIVE', phone: '010-1234-5678', provisionedBy: 1, provisionedAt: '2026-11-02T00:30:00Z' }, { id: 3, name: '박서연', email: 'seoyeon@inspire.camp', role: 'STUDENT', status: 'ACTIVE', provisionedBy: 1, provisionedAt: '2026-11-02T00:35:00Z' }, { id: 4, name: '정현우', email: 'hyunwoo@inspire.camp', role: 'INSTRUCTOR', status: 'ACTIVE', provisionedBy: 1, provisionedAt: '2026-11-01T00:00:00Z' }, { id: 5, name: '최민준', email: 'minjun@inspire.camp', role: 'STUDENT', status: 'ACTIVE', provisionedBy: 1, provisionedAt: '2026-11-02T01:00:00Z' }],
         cohorts: [{ id: 1, courseId: 1, name: 'AM Inspire Camp 6기', startDate: '2026-09-01', endDate: '2027-02-28', status: 'ACTIVE' }, { id: 2, courseId: 1, name: 'AM Inspire Camp 7기', startDate: '2027-03-01', endDate: '2027-08-31', status: 'ACTIVE' }],
         enrollments: [{ id: 1, cohortId: 1, userId: 2, role: 'STUDENT', status: 'ACTIVE' }, { id: 2, cohortId: 1, userId: 3, role: 'STUDENT', status: 'ACTIVE' }, { id: 3, cohortId: 1, userId: 4, role: 'INSTRUCTOR', status: 'ACTIVE' }, { id: 4, cohortId: 1, userId: 5, role: 'STUDENT', status: 'ACTIVE' }],

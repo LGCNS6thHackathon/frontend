@@ -3,16 +3,12 @@
 import * as React from "react";
 import { AppSidebar, NavTabId } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
-import { HomeView } from "@/components/views/home-view";
-import { ScheduleView } from "@/components/views/schedule-view";
-import { NoticesView } from "@/components/views/notices-view";
-import { QaView } from "@/components/views/qa-view";
-import { EvaluationView } from "@/components/views/evaluation-view";
-import { AssignmentView } from "@/components/views/assignment-view";
-import { AiReviewView } from "@/components/views/ai-review-view";
-import { MyPageView } from "@/components/views/mypage-view";
+
+import { LiveHome, LiveSchedule, LivePosts, LiveAssignments, LiveAssessments, LiveProfile, LiveReview, LiveNotifications } from "@/components/live/student-views";
+import { SessionToolbar, useSession } from "@/components/live/session";
 
 export default function LmsPortalPage() {
+  const {cohort}=useSession();
   const [currentTab, setCurrentTab] = React.useState<NavTabId>("home");
   const [isDark, setIsDark] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -115,6 +111,7 @@ export default function LmsPortalPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        <SessionToolbar />
         <AppHeader
           currentTab={currentTab}
           onTabChange={handleTabChange}
@@ -124,14 +121,17 @@ export default function LmsPortalPage() {
         />
 
         <main className="flex-1 container mx-auto px-4 py-6 sm:px-8 max-w-7xl animate-in fade-in-50 duration-200">
-          {currentTab === "home" && <HomeView onNavigate={handleTabChange} />}
-          {currentTab === "schedule" && <ScheduleView />}
-          {currentTab === "notices" && <NoticesView />}
-          {currentTab === "qa" && <QaView />}
-          {currentTab === "evaluation" && <EvaluationView />}
-          {currentTab === "assignment" && <AssignmentView />}
-          {currentTab === "ai-review" && <AiReviewView />}
-          {currentTab === "mypage" && <MyPageView />}
+          {cohort ? <div key={cohort.id} className="space-y-6">
+          {currentTab === "home" && <LiveHome />}
+          {currentTab === "schedule" && <LiveSchedule />}
+          {currentTab === "notices" && <LivePosts />}
+          {currentTab === "qa" && <LivePosts question />}
+          {currentTab === "evaluation" && <LiveAssessments />}
+          {currentTab === "assignment" && <LiveAssignments />}
+          {currentTab === "ai-review" && <LiveReview />}
+          {currentTab === "mypage" && <LiveProfile />}
+          {currentTab === "home" && <LiveNotifications />}
+          </div> : <div className="rounded-xl border bg-card p-8 text-sm text-muted-foreground">배정된 기수가 없습니다. 관리자에게 기수 배정을 요청해 주세요.</div>}
         </main>
 
         {/* Global Footer */}
@@ -140,7 +140,7 @@ export default function LmsPortalPage() {
             <p>© 2026 LG CNS AM Inspire Camp 6기. 차세대 수강생 LMS 포털</p>
             <div className="flex items-center gap-4 text-[11px]">
               <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                ● 서버 상태 (3ms)
+                인증된 학습 세션
               </span>
             </div>
           </div>

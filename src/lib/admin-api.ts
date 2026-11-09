@@ -1,3 +1,4 @@
+import {api as authenticatedApi, FileInfo} from './api-client';
 import { Resource, Row } from './admin-model';
 export class ApiError extends Error {
     constructor(public status: number, message: string) { super(message); }
@@ -8,7 +9,7 @@ type Page = {
     total: number;
     questions?: RawRow[];
 };
-const supported: Resource[] = ['users', 'cohorts', 'enrollments', 'attendance', 'corrections', 'posts', 'comments', 'assignments', 'submissions', 'assessments', 'questions'];
+const supported: Resource[] = ['courses','events','users', 'cohorts', 'enrollments', 'attendance', 'corrections', 'posts', 'comments', 'assignments', 'submissions', 'assessments', 'questions','videos','chapters','subjects','units','topics'];
 function normalize(resource: Resource, raw: RawRow): Row {
     const row = { ...raw } as Row;
     if (resource === 'attendance')
@@ -26,11 +27,13 @@ function normalize(resource: Resource, raw: RawRow): Row {
                 row[key] = new Date(date.valueOf() + 9 * 3600000).toISOString().slice(0, 16);
         }
     }
+    if(Array.isArray(raw.files)){const files=raw.files as FileInfo[];row.fileName=files.map(f=>f.originalName).join(', ');row.fileIds=JSON.stringify(files.map(f=>f.id));}
     return row;
 }
 // Token remains in memory. The host application supplies an authenticated ADMIN token.
 export function createAdminApi(baseUrl: string, token: string, cohortId: number) {
     const request = async <T>(path: string, method = 'GET', body?: unknown): Promise<T> => {
+        if (!baseUrl) return authenticatedApi<T>(path, method, body);
         const response = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
             method,
             headers: { Authorization: `Bearer ${token}`, ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }) },
@@ -48,6 +51,7 @@ export function createAdminApi(baseUrl: string, token: string, cohortId: number)
     }
     function collection(resource: Resource, parent?: number) {
         switch (resource) {
+            case 'courses':return '/api/courses';
             case 'users': return '/api/users';
             case 'cohorts': return '/api/cohorts';
             case 'comments': return `/api/posts/${parent}/comments`;
@@ -72,34 +76,36 @@ export function createAdminApi(baseUrl: string, token: string, cohortId: number)
                 if (resource === 'questions' || !rows.length || all.length >= result.total)
                     break;
             }
-            return all.map(row => normalize(resource, row));
+            const detailed=resource==='posts'?await Promise.all(all.map(row=>request<RawRow>(`/api/posts/${row.id}`))):all;
+            const parentField:Partial<Record<Resource,string>>={chapters:'videoId',units:'subjectId',topics:'unitId'};
+            return detailed.map(row => normalize(resource, row)).filter(row=>!parent||!parentField[resource]||row[parentField[resource]!]===parent);
         },
-        async save(resource: Resource, data: Row, isNew: boolean, parent?: number) {
+        async save(resource: Resource, data: Row, isNew: boolean, parent?: number, original?:Row) {
             check(resource);
             if (resource === 'users' && !isNew && data.role === 'MANAGER')
                 throw new ApiError(501, '현재 회원 API의 전역 역할에는 MANAGER가 없습니다. 기수 배정에서 MANAGER로 지정하세요.');
-            if (resource === 'questions' && (data.topicId || data.chapterId))
-                throw new ApiError(501, '현재 API에는 topicId·복습 챕터 저장 계약이 없습니다. Mock 모드에서 시연하세요.');
-            if (resource === 'posts' && (data.visibility === 'PUBLIC' || data.publicSlug))
-                throw new ApiError(501, '공개 링크·Discord API는 구현 대기 중입니다.');
             const keys: Partial<Record<Resource, string[]>> = {
+                courses:['title','description','totalHours'],events:['title','type','startAt','endAt','location','description'],
                 users: isNew ? ['name', 'email', 'password', 'phone'] : ['role', 'status'],
-                cohorts: ['name', 'startDate', 'endDate'], enrollments: ['userId', 'role'],
+                cohorts: ['name', 'startDate', 'endDate'], enrollments: ['userId', 'role','status'],
                 attendance: ['userId', 'date', 'unitType', 'sessionNo', 'status', 'note'],
-                posts: ['category', 'title', 'body', 'pinned'], comments: ['body'],
+                posts: ['category', 'title', 'body', 'pinned','visibility','publicSlug'], comments: ['body'],
                 assignments: ['title', 'description', 'dueAt', 'maxScore', 'instructorId', 'instructorName'],
                 submissions: ['score', 'feedback'], assessments: ['title', 'description', 'domain', 'startAt', 'endAt', 'durationMinutes'],
-                questions: ['prompt', 'explanation', 'points'],
+                questions: ['prompt', 'explanation', 'points','topicId','chapterId'],
+                videos:['title','lectureDate','periodNo','youtubeUrl','visibility'],chapters:['videoId','title','startSeconds','topicId'],subjects:['title'],units:['subjectId','title'],topics:['unitId','title','description'],
             };
             const payload: Record<string, unknown> = {};
             for (const key of keys[resource] || [])
-                if (data[key] !== undefined)
+                if (data[key] !== undefined && (isNew || !original || data[key]!==original[key]))
                     payload[key] = data[key];
             for (const key of ['dueAt', 'startAt', 'endAt'])
                 if (typeof payload[key] === 'string')
                     payload[key] = `${String(payload[key]).slice(0, 16)}:00+09:00`;
             if (resource === 'questions')
                 payload.options = [1, 2, 3, 4].map(i => ({ label: data[`option${i}`], isCorrect: Number(data.correct) === i }));
+            if (resource === 'enrollments' && !isNew) return request<Row>(`/api/cohorts/${cohortId}/enrollments/${data.id}`,'PATCH',payload);
+            if (!isNew && resource==='users' && !Object.keys(payload).length) return data;
             if (resource === 'submissions')
                 return request<Row>(`/api/submissions/${data.id}/review`, 'PATCH', payload);
             if (resource === 'attendance')

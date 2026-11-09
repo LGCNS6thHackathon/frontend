@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { INITIAL_NOTICES, INITIAL_USER } from "@/lib/lms-data";
+import { useSession } from "@/components/live/session";
 
 export type NavTabId =
   | "home"
@@ -66,6 +66,7 @@ export function AppSidebar({
 }: SidebarProps) {
   const [unreadCount, setUnreadCount] = React.useState(2);
 
+  const {user}=useSession();
   const navItems: NavGroup[] = [
     {
       group: "워크스페이스",
@@ -254,21 +255,7 @@ export function AppSidebar({
               </button>
             </div>
             <div className="space-y-1">
-              {INITIAL_NOTICES.slice(0, 3).map((notice) => (
-                <div
-                  key={notice.id}
-                  onClick={() => onTabChange("notices")}
-                  className="p-2 rounded-lg hover:bg-muted/70 transition-colors cursor-pointer text-xs space-y-0.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-foreground truncate max-w-[160px]">
-                      {notice.title}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">{notice.createdAt}</span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground line-clamp-1">{notice.content}</p>
-                </div>
-              ))}
+              <p className="p-3 text-xs text-muted-foreground">실시간 알림은 대시보드에서 확인하세요.</p>
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -288,7 +275,7 @@ export function AppSidebar({
             <div className="text-left">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                  {INITIAL_USER.name} 님
+                  {user.name} 님
                 </span>
                 <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
               </div>
