@@ -43,6 +43,7 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   highlight?: boolean;
+  badge?: string;
 }
 
 interface NavGroup {
@@ -114,6 +115,7 @@ export function AppSidebar({
           label: "AI 복습",
           icon: Sparkles,
           highlight: true,
+          badge: "BETA",
         },
         {
           id: "mypage",
@@ -136,11 +138,9 @@ export function AppSidebar({
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-extrabold text-base tracking-tight text-foreground">
-                  Inspire LMS
+                  NEURON
                 </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                  v2.0
-                </span>
+
               </div>
               <p className="text-[11px] text-muted-foreground font-medium">
                 LG CNS AM 캠프 6기
@@ -165,22 +165,31 @@ export function AppSidebar({
                     <button
                       key={item.id}
                       onClick={() => onTabChange(item.id)}
-                      className={`w-full flex items-center px-3 py-2.5 rounded-lg text-xs font-medium transition-all group ${
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25 font-semibold"
-                          : item.highlight
+                      className={`w-full flex items-center px-3 py-2.5 rounded-lg text-xs font-medium transition-all group ${isActive
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25 font-semibold"
+                        : item.highlight
                           ? "hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold"
                           : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2.5 truncate">
                         <Icon
-                          className={`size-4 shrink-0 transition-transform group-hover:scale-110 ${
-                            isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
-                          }`}
+                          className={`size-4 shrink-0 transition-transform group-hover:scale-110 ${isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+                            }`}
                         />
                         <span className="truncate">{item.label}</span>
                       </div>
+
+                      {item.badge && (
+                        <span
+                          className={`ml-auto text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${isActive
+                            ? "bg-primary-foreground/20 text-primary-foreground"
+                            : "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25"
+                            }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -190,9 +199,29 @@ export function AppSidebar({
         </div>
       </div>
 
-      {/* Bottom Section: Notification + User Profile + Theme */}
+      {/* Bottom Section: Theme Switch (Placed Above Notifications) -> Notification -> User Profile */}
       <div className="p-3 border-t bg-card/40 space-y-2.5">
-        {/* Notifications (Moved from Top-Right Header) */}
+        {/* 1. Theme & Quick Settings (Placed Above Notifications) */}
+        <div className="flex items-center justify-between px-2 pt-0.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            {isDark ? (
+              <Moon className="size-3.5 text-indigo-400" />
+            ) : (
+              <Sun className="size-3.5 text-amber-500" />
+            )}
+            <span className="text-[11px] font-medium text-foreground">다크 모드</span>
+          </div>
+          <Switch
+            size="sm"
+            checked={isDark}
+            onCheckedChange={onToggleDark}
+            aria-label="다크 모드 전환"
+          />
+        </div>
+
+        <Separator />
+
+        {/* 2. Notifications (Moved from Top-Right Header) */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -246,7 +275,7 @@ export function AppSidebar({
 
         <Separator />
 
-        {/* User Mini Card */}
+        {/* 3. User Mini Card */}
         <div
           onClick={() => onTabChange("mypage")}
           className="flex items-center justify-between p-2 rounded-xl hover:bg-muted/60 transition-colors cursor-pointer group"
@@ -269,26 +298,6 @@ export function AppSidebar({
             </div>
           </div>
           <ChevronRight className="size-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
-        </div>
-
-        <Separator />
-
-        {/* Theme & Quick Settings */}
-        <div className="flex items-center justify-between px-2 pt-0.5 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            {isDark ? (
-              <Moon className="size-3.5 text-indigo-400" />
-            ) : (
-              <Sun className="size-3.5 text-amber-500" />
-            )}
-            <span className="text-[11px]">다크 모드</span>
-          </div>
-          <Switch
-            size="sm"
-            checked={isDark}
-            onCheckedChange={onToggleDark}
-            aria-label="다크 모드 전환"
-          />
         </div>
       </div>
     </aside>

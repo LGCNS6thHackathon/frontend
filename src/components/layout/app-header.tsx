@@ -82,8 +82,11 @@ export function AppHeader({
           <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             {current.title}
             {currentTab === "ai-review" && (
-              <Badge variant="default" className="text-[10px] bg-indigo-600 text-white">
-                AI Powered
+              <Badge
+                variant="default"
+                className="text-[10px] bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-extrabold tracking-wider px-2 py-0.5 rounded-full uppercase border-none shadow-xs"
+              >
+                BETA
               </Badge>
             )}
           </h1>

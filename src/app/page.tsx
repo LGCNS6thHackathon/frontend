@@ -17,14 +17,17 @@ export default function LmsPortalPage() {
   const [isDark, setIsDark] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
-  // Initialize theme and URL query tab on mount
+  // Initialize theme from localStorage/system and URL query tab on mount
   React.useEffect(() => {
-    // Check dark mode
     if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("theme");
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      if (prefersDark) {
-        setIsDark(true);
+      const isDarkMode = savedTheme === "dark" || (!savedTheme && prefersDark);
+      setIsDark(isDarkMode);
+      if (isDarkMode) {
         document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
       }
 
       // Check URL query param ?tab=...
@@ -71,8 +74,10 @@ export default function LmsPortalPage() {
       const next = !prev;
       if (next) {
         document.documentElement.classList.add("dark");
+        localStorage.setItem("theme", "dark");
       } else {
         document.documentElement.classList.remove("dark");
+        localStorage.setItem("theme", "light");
       }
       return next;
     });
