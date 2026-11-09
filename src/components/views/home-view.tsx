@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   ArrowRight,
-  BookOpen,
   Calendar,
   CheckCircle2,
   Clock,
@@ -11,11 +10,13 @@ import {
   FileCheck,
   MapPin,
   Megaphone,
+  ShieldAlert,
   Sparkles,
   User,
-  Video,
   Zap,
 } from "lucide-react";
+
+import { ZepIcon } from "@/components/icons/zep-icon";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,15 +84,26 @@ export function HomeView({ onNavigate }: HomeViewProps) {
 
           {/* Quick Action CTA Box */}
           <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0">
-            <Button
-              size="lg"
-              className="bg-white text-indigo-950 hover:bg-white/90 font-bold gap-2 shadow-md shadow-black/20"
-              onClick={() => window.open(TODAY_SCHEDULE.zoomUrl, "_blank")}
+            <button
+              onClick={() => window.open(TODAY_SCHEDULE.zepUrl, "_blank")}
+              className="group flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-extrabold text-white bg-gradient-to-r from-[#6758FF] via-[#5c4cff] to-[#4e3dff] hover:from-[#5747ee] hover:to-[#4332ee] shadow-lg shadow-[#6758FF]/40 border border-white/20 active:scale-[0.98] transition-all cursor-pointer"
             >
-              <Video className="size-4 text-indigo-600" />
-              온라인 강의실 입장 (Zoom)
-            </Button>
+              <div className="flex size-5 items-center justify-center rounded-md bg-white/20 p-0.5 text-white group-hover:scale-110 transition-transform">
+                <ZepIcon className="size-full fill-white" />
+              </div>
+              <span>젭(ZEP) 가상 강의실 입장</span>
+              <span className="flex size-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
+            </button>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5"
+                onClick={() => window.open(TODAY_SCHEDULE.detectUrl, "_blank")}
+              >
+                <ShieldAlert className="size-3.5 text-amber-300" />
+                자리이탈감지
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -100,15 +112,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
               >
                 <Download className="size-3.5" />
                 강의자료
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 bg-white/10 hover:bg-white/20 border-white/20 text-white text-xs gap-1.5"
-                onClick={() => onNavigate("schedule")}
-              >
-                <BookOpen className="size-3.5" />
-                다시보기
               </Button>
             </div>
           </div>

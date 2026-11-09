@@ -25,7 +25,8 @@ export interface TodaySchedule {
   instructor: string;
   time: string;
   location: string;
-  zoomUrl: string;
+  zepUrl: string;
+  detectUrl: string;
   materialUrl: string;
   attendanceStatus: "출석" | "지각" | "조퇴" | "결석" | "대기";
   replayAvailable: boolean;
@@ -138,7 +139,8 @@ export const TODAY_SCHEDULE: TodaySchedule = {
   instructor: "김민수 마스터 멘토",
   time: "09:00 ~ 18:00 (총 8시간)",
   location: "LG CNS 상암 IT센터 4강의실 / 온·오프라인 병행",
-  zoomUrl: "https://zoom.us/j/inspire6-hackathon",
+  zepUrl: "https://zep.us/play/inspire6",
+  detectUrl: "https://detect.wsts.kr",
   materialUrl: "https://lms.wsts.kr/materials/day69.pdf",
   attendanceStatus: "출석",
   replayAvailable: true,
