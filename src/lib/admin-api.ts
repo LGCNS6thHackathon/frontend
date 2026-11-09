@@ -1,3 +1,4 @@
+import { isApiResource, UNAVAILABLE_MESSAGE } from "./backend-capabilities";
 import { api as authenticatedApi, FileInfo } from "./api-client";
 import { Resource, Row } from "./admin-model";
 export class ApiError extends Error {
@@ -14,26 +15,6 @@ type Page = {
   total: number;
   questions?: RawRow[];
 };
-const supported: Resource[] = [
-  "courses",
-  "events",
-  "users",
-  "cohorts",
-  "enrollments",
-  "attendance",
-  "corrections",
-  "posts",
-  "comments",
-  "assignments",
-  "submissions",
-  "assessments",
-  "questions",
-  "videos",
-  "chapters",
-  "subjects",
-  "units",
-  "topics",
-];
 function normalize(resource: Resource, raw: RawRow): Row {
   const row = { ...raw } as Row;
   if (resource === "attendance") row.date = String(raw.attendanceDate);
@@ -99,11 +80,7 @@ export function createAdminApi(
     return response.status === 204 ? (undefined as T) : response.json();
   };
   function check(resource: Resource) {
-    if (!supported.includes(resource))
-      throw new ApiError(
-        501,
-        "이 기능의 백엔드 API는 아직 명세되지 않았습니다. Mock 모드에서 시연할 수 있습니다.",
-      );
+    if (!isApiResource(resource)) throw new ApiError(501, UNAVAILABLE_MESSAGE);
   }
   function collection(resource: Resource, parent?: number) {
     switch (resource) {
@@ -205,15 +182,10 @@ export function createAdminApi(
           "sessionNo",
           "status",
           "note",
+          "checkIn",
+          "checkOut",
         ],
-        posts: [
-          "category",
-          "title",
-          "body",
-          "pinned",
-          "visibility",
-          "publicSlug",
-        ],
+        posts: ["category", "title", "body", "pinned"],
         comments: ["body"],
         assignments: [
           "title",
@@ -232,24 +204,16 @@ export function createAdminApi(
           "endAt",
           "durationMinutes",
         ],
-        questions: ["prompt", "explanation", "points", "topicId", "chapterId"],
-        videos: [
-          "title",
-          "lectureDate",
-          "periodNo",
-          "youtubeUrl",
-          "visibility",
-        ],
-        chapters: ["videoId", "title", "startSeconds", "topicId"],
-        subjects: ["title"],
-        units: ["subjectId", "title"],
-        topics: ["unitId", "title", "description"],
+        questions: ["prompt", "explanation", "points"],
       };
       const payload: Record<string, unknown> = {};
       for (const key of keys[resource] || [])
         if (
           data[key] !== undefined &&
-          (isNew || !original || data[key] !== original[key])
+          (isNew ||
+            resource === "attendance" ||
+            !original ||
+            data[key] !== original[key])
         )
           payload[key] = data[key];
       for (const key of ["dueAt", "startAt", "endAt"])
@@ -269,7 +233,11 @@ export function createAdminApi(
           "PATCH",
           payload,
         );
-      if (!isNew && resource === "users" && !Object.keys(payload).length)
+      if (
+        !isNew &&
+        !["questions", "submissions", "attendance"].includes(resource) &&
+        !Object.keys(payload).length
+      )
         return data;
       if (resource === "submissions")
         return request<Row>(

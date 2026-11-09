@@ -1,3 +1,4 @@
+import backendRoutes from "@/lib/backend-routes.json";
 import { IS_MOCK } from "@/lib/data-mode";
 import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
@@ -47,6 +48,26 @@ async function proxy(
       { status: 503 },
     );
   const { path } = await context.params;
+  const pathname = "/api/" + path.join("/");
+  const known = Object.entries(backendRoutes).some(([template, methods]) => {
+    const pattern = template
+      .split("/")
+      .map((segment) => (segment.startsWith("{") ? "[^/]+" : segment))
+      .join("/");
+    return (
+      new RegExp("^" + pattern + "$").test(pathname) &&
+      (methods as string[]).includes(req.method.toLowerCase())
+    );
+  });
+  if (!known)
+    return NextResponse.json(
+      {
+        code: "API_NOT_SUPPORTED",
+        message: "현재 백엔드에서 제공하지 않는 API입니다.",
+      },
+      { status: 501 },
+    );
+
   if (!["GET", "HEAD"].includes(req.method)) {
     const origin = req.headers.get("origin");
     if (origin && origin !== req.nextUrl.origin)

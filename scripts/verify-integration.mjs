@@ -58,47 +58,81 @@ function client() {
     },
   };
 }
+// Run only against an isolated instance of the unchanged backend main.
 const admin = client(),
   student = client(),
   anonymous = client();
 await anonymous.call("GET", "/api/me", undefined, 401);
-check(true, "익명 API 접근 차단");
-let result = await admin.call("POST", "/api/auth/login", { email, password });
+check(true, "익명 API 차단");
+const logged = await admin.call("POST", "/api/auth/login", { email, password });
 check(
-  !result.data.accessToken && !result.data.refreshToken && !!result.data.user,
-  "로그인 응답에서 토큰 비공개",
+  logged.data.user && !logged.data.accessToken && !logged.data.refreshToken,
+  "토큰을 브라우저 JSON에 노출하지 않음",
 );
 check(
-  result.headers
+  logged.headers
     .getSetCookie()
     .every((c) => c.includes("HttpOnly") && c.includes("SameSite=lax")),
-  "HttpOnly/SameSite 세션 쿠키",
+  "HttpOnly/SameSite 쿠키",
 );
-await admin.call("POST", "/api/courses", { title: "CSRF 차단 검증" }, 403, {
-  Origin: "https://untrusted.example",
-});
-check(true, "교차 출처 변경 요청 차단");
 admin.jar.set("lms_access", "expired");
 await Promise.all([
   admin.call("GET", "/api/me"),
   admin.call("GET", "/api/cohorts"),
 ]);
-check(true, "동시 요청에서 갱신 토큰 회전 처리");
+check(true, "동시 요청의 갱신 토큰 회전");
+await admin.call("POST", "/api/courses", { title: "출처 검증" }, 403, {
+  Origin: "https://untrusted.example",
+});
+check(true, "교차 출처 변경 차단");
+for (const [method, path] of [
+  ["GET", "/api/cohorts/1/videos"],
+  ["GET", "/api/cohorts/1/topics"],
+  ["POST", "/api/posts/1/discord"],
+  ["GET", "/api/cohorts/1/assessment-summary"],
+  ["POST", "/api/cohorts/1/review-sessions"],
+]) {
+  const result = await admin.call(
+    method,
+    path,
+    method === "POST" ? {} : undefined,
+    501,
+  );
+  assert.equal(result.data.code, "API_NOT_SUPPORTED");
+}
+check(true, "main에 없는 API는 백엔드에 전달하지 않음");
+const date = (offset = 0) =>
+  new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(
+    new Date(Date.now() + offset * 86400000),
+  );
 const course = (
   await admin.call(
     "POST",
     "/api/courses",
-    { title: `API 검증 ${run}`, totalHours: 100 },
+    {
+      title: `프론트 검증 ${run}`,
+      description: "기존 main 연동",
+      totalHours: 100,
+    },
     201,
   )
 ).data;
-const date = (offset) =>
-  new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+await admin.call("PATCH", `/api/courses/${course.id}`, {
+  description: "수정된 과정",
+});
 const cohort = (
   await admin.call(
     "POST",
     `/api/courses/${course.id}/cohorts`,
     { name: "검증 기수", startDate: date(-7), endDate: date(60) },
+    201,
+  )
+).data;
+const other = (
+  await admin.call(
+    "POST",
+    `/api/courses/${course.id}/cohorts`,
+    { name: "접근 차단 기수", startDate: date(-7), endDate: date(60) },
     201,
   )
 ).data;
@@ -114,90 +148,56 @@ const user = (
     201,
   )
 ).data;
-const issued = (
-  await admin.call("GET", `/api/users?q=${encodeURIComponent(user.email)}`)
-).data.items[0];
 check(
-  issued.provisionedBy && issued.provisionedAt && !user.passwordHash,
-  "계정 발급 이력 및 비밀번호 비공개",
-);
-await admin.call(
-  "POST",
-  `/api/cohorts/${cohort.id}/enrollments`,
-  { userId: user.id, role: "STUDENT" },
-  201,
+  user.role === "STUDENT" && !user.passwordHash && !user.password,
+  "기존 계정 발급 계약",
 );
 await student.call("POST", "/api/auth/login", {
   email: user.email,
   password: "IntegrationStudent!42",
 });
-await student.call("GET", "/api/users", undefined, 403);
-check(true, "수강생 관리자 API 차단");
-const subject = (
-  await admin.call(
-    "POST",
-    `/api/cohorts/${cohort.id}/subjects`,
-    { title: "웹 개발" },
-    201,
-  )
-).data;
-const unit = (
-  await admin.call(
-    "POST",
-    `/api/cohorts/${cohort.id}/units`,
-    { title: "React", subjectId: subject.id },
-    201,
-  )
-).data;
-const topic = (
-  await admin.call(
-    "POST",
-    `/api/cohorts/${cohort.id}/topics`,
-    { title: "상태 관리", unitId: unit.id },
-    201,
-  )
-).data;
-const video = (
-  await admin.call(
-    "POST",
-    `/api/cohorts/${cohort.id}/videos`,
-    {
-      title: "React 수업",
-      lectureDate: date(0),
-      periodNo: 1,
-      youtubeUrl: "https://youtu.be/Tn6-PIqc4UM",
-      visibility: "PRIVATE",
-    },
-    201,
-  )
-).data;
 check(
-  (await student.call("GET", `/api/cohorts/${cohort.id}/videos`)).data.total ===
-    0,
-  "비공개 영상 학생 숨김",
+  (await student.call("GET", "/api/cohorts")).data.total === 0,
+  "미배정 회원의 빈 기수 목록",
 );
-await admin.call("PATCH", `/api/videos/${video.id}`, { visibility: "PUBLIC" });
-const chapter = (
+const enrollment = (
   await admin.call(
     "POST",
-    `/api/cohorts/${cohort.id}/chapters`,
+    `/api/cohorts/${cohort.id}/enrollments`,
+    { userId: user.id, role: "STUDENT" },
+    201,
+  )
+).data;
+await admin.call(
+  "PATCH",
+  `/api/cohorts/${cohort.id}/enrollments/${enrollment.id}`,
+  { status: "ACTIVE" },
+);
+await student.call("GET", `/api/cohorts/${other.id}/posts`, undefined, 403);
+await student.call("GET", "/api/users", undefined, 403);
+check(true, "회원 관리 및 다른 기수 접근 차단");
+const event = (
+  await admin.call(
+    "POST",
+    `/api/cohorts/${cohort.id}/events`,
     {
-      title: "상태 변경",
-      videoId: video.id,
-      startSeconds: 90,
-      topicId: topic.id,
+      title: "학습 일정",
+      type: "LECTURE",
+      startAt: new Date().toISOString(),
+      endAt: new Date(Date.now() + 3600000).toISOString(),
     },
     201,
   )
 ).data;
+await admin.call("PATCH", `/api/events/${event.id}`, { location: "교육장" });
 check(
   (
     await student.call(
       "GET",
-      `/api/cohorts/${cohort.id}/chapters?videoId=${video.id}`,
+      `/api/cohorts/${cohort.id}/events?month=${date().slice(0, 7)}`,
     )
-  ).data.items[0].startSeconds === 90,
-  "강의 챕터 및 시작 초 저장",
+  ).data.items.some((x) => x.id === event.id),
+  "월별 일정 조회/관리",
 );
 const post = (
   await admin.call(
@@ -205,67 +205,67 @@ const post = (
     `/api/cohorts/${cohort.id}/posts`,
     {
       category: "COURSE",
-      title: "API 연결 공지",
-      body: "실제 서버 연결 검증",
-      visibility: "PUBLIC",
-      publicSlug: `integration-${run}`,
+      title: "운영 공지",
+      body: "기존 API 공지 저장",
+      pinned: true,
     },
     201,
   )
 ).data;
+await admin.call("PATCH", `/api/posts/${post.id}`, { body: "수정된 공지" });
 check(
-  (await anonymous.call("GET", `/api/public/notices/integration-${run}`)).data
-    .title === post.title,
-  "공개 공지 익명 조회",
+  (await student.call("GET", `/api/posts/${post.id}`)).data.body ===
+    "수정된 공지",
+  "공지 CRUD",
 );
-anonymous.jar.set("lms_access", "expired");
-check(
-  (await anonymous.call("GET", `/api/public/notices/integration-${run}`)).data
-    .title === post.title,
-  "오래된 세션 쿠키가 있어도 공개 공지 조회",
-);
-anonymous.jar.clear();
-const failed = (await admin.call("POST", `/api/posts/${post.id}/discord`, {}))
-  .data;
-check(
-  failed.status === "FAILED" && failed.errorCode === "DISCORD_NOT_CONFIGURED",
-  "Webhook 미설정 시 명시적 전송 실패 저장",
-);
-const comment = (
+const questionPost = (
   await student.call(
     "POST",
-    `/api/posts/${post.id}/comments`,
-    { body: "댓글 저장 검증" },
+    `/api/cohorts/${cohort.id}/posts`,
+    { category: "QUESTION", title: "학습 질문", body: "질문 작성 검증" },
     201,
   )
 ).data;
-await student.call("PATCH", `/api/comments/${comment.id}`, {
-  body: "댓글 수정 검증",
-});
-await student.call("DELETE", `/api/comments/${comment.id}`, undefined, 204);
-check(true, "게시글 댓글 CRUD");
+const comment = (
+  await admin.call(
+    "POST",
+    `/api/posts/${questionPost.id}/comments`,
+    { body: "강사 답변" },
+    201,
+  )
+).data;
+await admin.call("PATCH", `/api/comments/${comment.id}`, { body: "수정 답변" });
+await admin.call("DELETE", `/api/comments/${comment.id}`, undefined, 204);
+check(true, "학습 질문 및 댓글 CRUD");
+const noticeFile = new FormData();
+noticeFile.set("file", new Blob(["공지 파일"]), "notice.txt");
+const uploaded = (
+  await admin.call("POST", `/api/posts/${post.id}/files`, noticeFile, 201)
+).data;
+check(
+  (await student.call("GET", `/api/files/${uploaded.id}/download`)).data ===
+    "공지 파일",
+  "공지 첨부 업로드·인증 다운로드",
+);
+await admin.call("DELETE", `/api/files/${uploaded.id}`, undefined, 204);
 const assignment = (
   await admin.call(
     "POST",
     `/api/cohorts/${cohort.id}/assignments`,
     {
-      title: "API 연동 과제",
-      description: "제출 파일과 채점을 확인합니다.",
+      title: "실제 API 과제",
+      description: "제출과 평가 검증",
       instructorName: "검증 강사",
-      dueAt: new Date(Date.now() + 86400000).toISOString(),
       maxScore: 100,
+      dueAt: new Date(Date.now() + 86400000).toISOString(),
     },
     201,
   )
 ).data;
 const form = new FormData();
-form.set("repoUrl", "https://github.com/example/test");
-form.set("submitMemo", "과제 제출 검증");
-form.set(
-  "file",
-  new Blob(["API integration file"], { type: "text/plain" }),
-  "submission.txt",
-);
+form.set("repoUrl", "https://github.com/example/project");
+form.set("submitMemo", "제출 내용");
+form.set("file", new Blob(["student upload"]), "submission.txt");
 const submission = (
   await student.call(
     "PUT",
@@ -275,52 +275,86 @@ const submission = (
 ).data;
 check(
   submission.files.length === 1 && submission.submittedAt,
-  "과제 multipart 제출 및 최종 업로드 시각",
+  "기존 multipart 제출 계약",
 );
-const file = submission.files[0];
 check(
-  (await student.call("GET", `/api/files/${file.id}/download`)).data ===
-    "API integration file",
-  "인증된 제출 파일 다운로드",
+  (await admin.call("GET", `/api/submissions/${submission.id}/files`)).data
+    .length === 1,
+  "관리자 제출 파일 조회",
 );
 await admin.call("PATCH", `/api/submissions/${submission.id}/review`, {
   score: 95,
-  feedback: "API 연동이 잘 되어 있습니다.",
+  feedback: "피드백 검증 완료",
 });
 await student.call(
   "PUT",
   `/api/assignments/${assignment.id}/submission`,
-  { submitMemo: "잠금 검증" },
+  { submitMemo: "잠금 후 수정" },
   409,
 );
-check(true, "채점 및 학생 수정 잠금");
+check(
+  (await student.call("GET", `/api/assignments/${assignment.id}`)).data
+    .submissionLocked,
+  "채점 및 제출 잠금",
+);
 const attendance = (
   await admin.call("PUT", `/api/cohorts/${cohort.id}/attendance`, {
     userId: user.id,
-    date: date(0),
+    date: date(),
+    status: "ABSENT",
     unitType: "DATE",
     sessionNo: 0,
-    status: "ABSENT",
   })
 ).data;
 const correction = (
   await student.call(
     "POST",
     `/api/attendance/${attendance.id}/corrections`,
-    { requestedStatus: "PRESENT", reason: "출석 기록 확인 요청" },
+    { requestedStatus: "PRESENT", reason: "기록 정정 요청 검증" },
     201,
   )
 ).data;
 await admin.call("PATCH", `/api/attendance/corrections/${correction.id}`, {
   status: "APPROVED",
 });
-check(true, "출결 소명 접수 및 승인");
+check(true, "출결 및 소명 승인");
+const sessionRecord = (
+  await admin.call("PUT", `/api/cohorts/${cohort.id}/attendance`, {
+    userId: user.id,
+    date: date(),
+    status: "ABSENT",
+    unitType: "SESSION",
+    sessionNo: 1,
+  })
+).data;
+const stale = (
+  await student.call(
+    "POST",
+    `/api/attendance/${sessionRecord.id}/corrections`,
+    { requestedStatus: "PRESENT", reason: "버전 충돌 재검증 요청" },
+    201,
+  )
+).data;
+await admin.call("PUT", `/api/cohorts/${cohort.id}/attendance`, {
+  userId: user.id,
+  date: date(),
+  status: "LEAVE",
+  unitType: "SESSION",
+  sessionNo: 1,
+});
+await admin.call(
+  "PATCH",
+  `/api/attendance/corrections/${stale.id}`,
+  { status: "APPROVED" },
+  409,
+);
+check(true, "출결 변경 후 소명 409 처리");
 const assessment = (
   await admin.call(
     "POST",
     `/api/cohorts/${cohort.id}/assessments`,
     {
-      title: "React 평가",
+      title: "기존 평가 API",
       domain: "React",
       startAt: new Date(Date.now() - 3600000).toISOString(),
       endAt: new Date(Date.now() + 3600000).toISOString(),
@@ -338,9 +372,8 @@ const question = (
         { label: "갱신 함수", isCorrect: true },
         { label: "직접 변경", isCorrect: false },
       ],
+      points: 10,
       explanation: "갱신 함수를 사용합니다.",
-      topicId: topic.id,
-      chapterId: chapter.id,
     },
     201,
   )
@@ -356,11 +389,7 @@ const attempt = (
     201,
   )
 ).data;
-check(
-  !("isCorrect" in attempt.questions[0].options[0]) &&
-    !("reviewLinks" in attempt.questions[0]),
-  "응시 중 정답/해설/복습 링크 비공개",
-);
+check(!("isCorrect" in attempt.questions[0].options[0]), "응시 중 정답 비공개");
 await student.call("PUT", `/api/assessment-attempts/${attempt.id}/answers`, {
   answers: [
     {
@@ -377,62 +406,32 @@ check(
       {},
     )
   ).data.score === 100,
-  "답안 저장 및 서버 채점",
+  "평가 답안 저장·서버 채점",
 );
 await admin.call("PATCH", `/api/assessments/${assessment.id}`, {
   status: "CLOSED",
 });
-check(
-  (await student.call("GET", `/api/assessment-attempts/${attempt.id}`)).data
-    .questions[0].reviewLinks[0].startSeconds === 90,
-  "평가 종료 후 복습 매핑 공개",
-);
-check(
-  (
-    await admin.call("GET", `/api/cohorts/${cohort.id}/assessment-summary`)
-  ).data.some(
-    (row) =>
-      row.id === assessment.id &&
-      row.completedCount === 1 &&
-      Number(row.average) === 100,
-  ),
-  "관리자 기수 성적 요약",
-);
-await student.call(
-  "GET",
-  `/api/cohorts/${cohort.id}/assessment-summary`,
-  undefined,
-  403,
-);
-const review = (
-  await student.call(
-    "POST",
-    `/api/cohorts/${cohort.id}/review-sessions`,
-    { topicId: topic.id, mode: "BLANK" },
-    201,
+const report = (
+  await admin.call(
+    "GET",
+    `/api/cohorts/${cohort.id}/assessment-report?userId=${user.id}`,
   )
 ).data;
-await student.call(
-  "PUT",
-  `/api/review-sessions/${review.id}/blank`,
-  { content: "오늘 배운 개념을 복습합니다." },
-  503,
-);
 check(
-  (await student.call("GET", `/api/review-sessions/${review.id}`)).data.review
-    .status === "FAILED",
-  "AI 설정 없음 안내 및 실패 상태 보존",
+  report.results[0].score === 100 &&
+    Number(report.results[0].cohortAverage) === 100,
+  "기존 회원별 성적 리포트와 해당 평가 기수 평균",
 );
 await student.call("POST", "/api/notifications/read-all", {});
 await student.call("PATCH", "/api/me", {
-  name: "수정된 검증 수강생",
+  name: "검증 완료 수강생",
   phone: "010-0000-0000",
 });
 check(
-  (await student.call("GET", "/api/me")).data.name === "수정된 검증 수강생",
-  "알림/개인정보 저장",
+  (await student.call("GET", "/api/me")).data.name === "검증 완료 수강생",
+  "알림·개인정보",
 );
 await student.call("POST", "/api/auth/logout", {}, 204);
 await student.call("GET", "/api/me", undefined, 401);
-check(true, "로그아웃 쿠키 제거");
-console.log(`Passed ${checks} integration checks through the Next.js proxy.`);
+check(true, "로그아웃");
+console.log(`Passed ${checks} checks using only existing backend-main APIs.`);

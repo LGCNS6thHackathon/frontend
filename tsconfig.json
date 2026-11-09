@@ -32,11 +32,12 @@
     "**/*.ts",
     "**/*.tsx",
     ".next-admin/types/**/*.ts",
+    ".next-api-mode/types/**/*.ts",
     ".next-integration/types/**/*.ts",
     ".next-modes/types/**/*.ts",
     ".next/types/**/*.ts",
     "next-env.d.ts",
-    ".next-api-mode/types/**/*.ts"
+    ".next-existing-main/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

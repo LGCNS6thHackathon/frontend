@@ -855,98 +855,24 @@ export function LiveSchedule() {
           </form>
         </DialogContent>
       </Dialog>
-      <LiveVideos month={month} />
+      <LiveVideos />
     </div>
   );
 }
-type VideoRow = {
-  id: number;
-  title: string;
-  lectureDate: string;
-  periodNo: number;
-  youtubeUrl: string;
-};
-export function LiveVideos({ month }: { month: string }) {
-  const [chapters, setChapters] = useState<
-    { title: string; startSeconds: number; url: string }[]
-  >([]);
-  const { cohort } = useSession();
-  const list = useResource<VideoRow[]>(
-    `/api/cohorts/${cohort!.id}/videos`,
-    true,
-  );
-  const { run } = useMutation();
+export function LiveVideos() {
+  return <UnavailableFeature title="강의 다시보기" />;
+}
+function UnavailableFeature({ title }: { title: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>강의 다시보기</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {list.error ? (
-          <p className="text-sm text-muted-foreground">{list.error}</p>
-        ) : (
-          (list.data || [])
-            .filter((v) => v.lectureDate.startsWith(month))
-            .map((v) => (
-              <div
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
-                key={v.id}
-              >
-                <span>
-                  {v.lectureDate} · {v.periodNo}교시 · {v.title}
-                </span>
-                <Button
-                  size="sm"
-                  onClick={() =>
-                    window.open(v.youtubeUrl, "_blank", "noopener,noreferrer")
-                  }
-                >
-                  영상 재생
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    run(async () => {
-                      const chapters = await allPages<{
-                        title: string;
-                        startSeconds: number;
-                      }>(`/api/cohorts/${cohort!.id}/chapters?videoId=${v.id}`);
-                      setChapters(
-                        chapters.map((c) => ({
-                          ...c,
-                          url:
-                            v.youtubeUrl +
-                            (v.youtubeUrl.includes("?") ? "&" : "?") +
-                            "t=" +
-                            c.startSeconds +
-                            "s",
-                        })),
-                      );
-                    })
-                  }
-                >
-                  소단원
-                </Button>
-              </div>
-            ))
-        )}
-        {!list.error && !list.loading && !list.data?.length && (
-          <p className="text-sm text-muted-foreground">
-            등록된 다시보기 영상이 없습니다.
-          </p>
-        )}
-        {chapters.map((c, i) => (
-          <a
-            className="block text-sm text-indigo-500 underline"
-            key={i}
-            href={c.url}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {c.title} · {c.startSeconds}초부터 재생
-          </a>
-        ))}
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          현재 백엔드에서 제공하지 않는 기능입니다. 목업 모드에서는 화면을
+          시연할 수 있습니다.
+        </p>
       </CardContent>
     </Card>
   );
@@ -958,14 +884,6 @@ type Question = {
   topicId?: number;
   points: number;
   options: { id: number; label: string; isCorrect?: boolean }[];
-  reviewLinks?: {
-    id: number;
-    title: string;
-    lectureDate: string;
-    periodNo: number;
-    startSeconds: number;
-    youtubeUrl: string;
-  }[];
 };
 type Assessment = {
   id: number;
@@ -1131,24 +1049,6 @@ export function LiveAssessments() {
                   해설: {q.explanation}
                 </p>
               )}
-              {q.reviewLinks?.map((link) => (
-                <a
-                  key={link.id}
-                  className="block text-sm text-indigo-500 underline"
-                  href={
-                    link.youtubeUrl +
-                    (link.youtubeUrl.includes("?") ? "&" : "?") +
-                    "t=" +
-                    link.startSeconds +
-                    "s"
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {link.lectureDate} · {link.periodNo}교시 · {link.title} ·{" "}
-                  {link.startSeconds}초
-                </a>
-              ))}
             </div>
           ))}
           {attempt?.status === "IN_PROGRESS" && (
@@ -1388,243 +1288,6 @@ export function LiveNotifications() {
     </Card>
   );
 }
-type ReviewQuestion = {
-  id: number;
-  prompt: string;
-  choiceA: string;
-  choiceB: string;
-  choiceC: string;
-  choiceD: string;
-  selectedChoice?: number;
-  correctChoice?: number;
-  explanation?: string;
-  isCorrect?: boolean;
-};
 export function LiveReview() {
-  const { cohort } = useSession();
-  const topics = useResource<{ id: number; title: string }[]>(
-    `/api/cohorts/${cohort!.id}/topics`,
-    true,
-  );
-  const [topic, setTopic] = useState(""),
-    [mode, setMode] = useState("BLANK"),
-    [sessionId, setSessionId] = useState<number | null>(null),
-    [content, setContent] = useState(""),
-    [feedback, setFeedback] = useState<{
-      strengths: string;
-      gaps: string;
-      recommendations: string;
-    } | null>(null),
-    [question, setQuestion] = useState<ReviewQuestion | null>(null),
-    [finished, setFinished] = useState(false);
-  const { busy, run } = useMutation();
-  async function begin() {
-    const result = await api<{ id: number }>(
-      `/api/cohorts/${cohort!.id}/review-sessions`,
-      "POST",
-      { topicId: Number(topic), mode },
-    );
-    setSessionId(result.id);
-    return result.id;
-  }
-  return (
-    <div className="space-y-5">
-      <Card>
-        <CardHeader>
-          <CardTitle>AI 데일리 복습</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            학습 주제를 선택하고 백지 복습 또는 한 문제씩 풀어보는 퀴즈로
-            복습하세요.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {topics.error ? (
-            <State {...topics} retry={topics.reload} />
-          ) : (
-            <label className="grid gap-2 text-sm">
-              핵심 개념
-              <select
-                className={fieldClass}
-                value={topic}
-                disabled={!!sessionId}
-                onChange={(e) => setTopic(e.target.value)}
-              >
-                <option value="">주제를 선택하세요</option>
-                {topics.data?.map((x) => (
-                  <option key={x.id} value={x.id}>
-                    {x.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <div className="flex gap-2">
-            {[
-              ["BLANK", "백지 복습"],
-              ["QUIZ", "객관식 퀴즈"],
-            ].map(([value, label]) => (
-              <Button
-                key={value}
-                disabled={!!sessionId}
-                variant={mode === value ? "default" : "outline"}
-                onClick={() => setMode(value)}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-          {mode === "BLANK" ? (
-            <form
-              className="space-y-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                run(async () => {
-                  const id = sessionId || (await begin());
-                  setFeedback(
-                    await api(`/api/review-sessions/${id}/blank`, "PUT", {
-                      content,
-                    }),
-                  );
-                }, "AI 피드백을 받았습니다.");
-              }}
-            >
-              <textarea
-                className={fieldClass}
-                rows={10}
-                required
-                maxLength={20000}
-                aria-label="백지 복습 내용"
-                placeholder="기억나는 개념을 나의 말로 정리해 보세요."
-                value={content}
-                disabled={finished}
-                onChange={(e) => setContent(e.target.value)}
-              />
-              <Button
-                type="submit"
-                disabled={busy || !topic || !content.trim() || finished}
-              >
-                {busy ? "피드백 생성 중…" : "AI 피드백 요청 / 재시도"}
-              </Button>
-            </form>
-          ) : (
-            <div className="space-y-4">
-              {question && (
-                <div className="space-y-3">
-                  <h3 className="font-semibold">{question.prompt}</h3>
-                  {["choiceA", "choiceB", "choiceC", "choiceD"].map(
-                    (key, i) => (
-                      <Button
-                        key={key}
-                        className="h-auto w-full justify-start whitespace-normal py-3 text-left"
-                        variant={
-                          question.selectedChoice === i + 1
-                            ? "default"
-                            : "outline"
-                        }
-                        disabled={busy || !!question.selectedChoice || finished}
-                        onClick={() =>
-                          run(async () => {
-                            setQuestion(
-                              await api(
-                                `/api/review-questions/${question.id}/answer`,
-                                "POST",
-                                { selectedChoice: i + 1 },
-                              ),
-                            );
-                          })
-                        }
-                      >
-                        {i + 1}. {question[key as "choiceA"]}
-                      </Button>
-                    ),
-                  )}
-                  {question.selectedChoice && (
-                    <p className="rounded-lg bg-muted p-4 text-sm">
-                      {question.isCorrect
-                        ? "정답입니다."
-                        : "다시 확인해 보세요."}{" "}
-                      정답: {question.correctChoice}
-                      <br />
-                      {question.explanation}
-                    </p>
-                  )}
-                </div>
-              )}
-              <Button
-                disabled={
-                  busy ||
-                  !topic ||
-                  (!!question && !question.selectedChoice) ||
-                  finished
-                }
-                onClick={() =>
-                  run(async () => {
-                    const id = sessionId || (await begin());
-                    setQuestion(
-                      await api(
-                        `/api/review-sessions/${id}/questions`,
-                        "POST",
-                        {},
-                      ),
-                    );
-                  })
-                }
-              >
-                {busy
-                  ? "문제 생성 중…"
-                  : question
-                    ? "다음 문제 풀기"
-                    : "퀴즈 시작 / 재시도"}
-              </Button>
-            </div>
-          )}
-          {sessionId && !finished && (
-            <Button
-              variant="outline"
-              disabled={busy}
-              onClick={() =>
-                run(async () => {
-                  await api(`/api/review-sessions/${sessionId}`, "PATCH", {});
-                  setFinished(true);
-                }, "복습을 종료했습니다.")
-              }
-            >
-              복습 종료
-            </Button>
-          )}
-          {finished && (
-            <Button
-              onClick={() => {
-                setSessionId(null);
-                setFinished(false);
-                setFeedback(null);
-                setQuestion(null);
-                setContent("");
-              }}
-            >
-              새 복습 시작
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-      {feedback && (
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            ["잘 이해한 내용", feedback.strengths],
-            ["보완할 내용", feedback.gaps],
-            ["추가 복습 권고", feedback.recommendations],
-          ].map(([title, value]) => (
-            <Card key={title}>
-              <CardHeader>
-                <CardTitle>{title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-wrap text-sm">{value}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return <UnavailableFeature title="AI 복습" />;
 }

@@ -1,4 +1,5 @@
 "use client";
+import { isApiResource, UNAVAILABLE_MESSAGE } from "@/lib/backend-capabilities";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -111,23 +112,31 @@ export default function AdminPortal() {
   const [apiRows, setApiRows] = useState<Row[]>([]);
   const [loadError, setLoadError] = useState("");
   const loadVersion = useRef(0);
-  const [summary, setSummary] = useState<Row[]>([]);
-  const [summaryError, setSummaryError] = useState("");
+  const [reportTarget, setReportTarget] = useState(0);
+  const [reportRows, setReportRows] = useState<Row[]>([]);
+  const [reportError, setReportError] = useState("");
   useEffect(() => {
-    if (mode !== "api" || tab !== 5 || !cohort) return;
+    setReportTarget(0);
+    setReportRows([]);
+  }, [cohort]);
+  useEffect(() => {
+    if (mode !== "api" || tab !== 5 || !cohort || !reportTarget) return;
     let cancelled = false;
-    setSummaryError("");
-    sessionApi<Row[]>(`/api/cohorts/${cohort}/assessment-summary`)
-      .then((rows) => {
-        if (!cancelled) setSummary(rows);
+    setReportRows([]);
+    setReportError("");
+    sessionApi<{ results: Row[] }>(
+      `/api/cohorts/${cohort}/assessment-report?userId=${reportTarget}`,
+    )
+      .then((data) => {
+        if (!cancelled) setReportRows(data.results);
       })
       .catch((e) => {
-        if (!cancelled) setSummaryError(e.message);
+        if (!cancelled) setReportError(e.message);
       });
     return () => {
       cancelled = true;
     };
-  }, [cohort, mode, tab, panel]);
+  }, [mode, tab, cohort, reportTarget]);
   const store = mode === "mock" ? mockStore : apiStore;
   const api = createAdminApi(baseUrl, token, cohort);
   useEffect(() => {
@@ -178,29 +187,28 @@ export default function AdminPortal() {
       "enrollments",
       "assignments",
       "assessments",
-      "videos",
-      "chapters",
-      "subjects",
-      "units",
-      "topics",
       "corrections",
     ];
-    Promise.allSettled(resources.map((resource) => client.list(resource))).then(
-      (results) => {
-        if (cancelled) return;
-        setApiStore((current) => {
-          const next = { ...current };
-          results.forEach((result, i) => {
-            if (result.status === "fulfilled")
-              next[resources[i]] = result.value.map((row) => ({
-                ...row,
-                cohortId: row.cohortId ?? cohort,
-              }));
-          });
-          return next;
-        });
-      },
+    const scopedResources = resources.filter(
+      (resource) =>
+        cohort > 0 || ["users", "courses", "cohorts"].includes(resource),
     );
+    Promise.allSettled(
+      scopedResources.map((resource) => client.list(resource)),
+    ).then((results) => {
+      if (cancelled) return;
+      setApiStore((current) => {
+        const next = { ...current };
+        results.forEach((result, i) => {
+          if (result.status === "fulfilled")
+            next[scopedResources[i]] = result.value.map((row) => ({
+              ...row,
+              cohortId: row.cohortId ?? cohort,
+            }));
+        });
+        return next;
+      });
+    });
     return () => {
       cancelled = true;
     };
@@ -208,6 +216,12 @@ export default function AdminPortal() {
   // API reads are scoped to the active resource. Failures never fall back to demo data.
   useEffect(() => {
     if (mode !== "api") return;
+    if (!isApiResource(panel.resource)) {
+      setApiRows([]);
+      setLoadError("");
+      setBusy(false);
+      return;
+    }
     let cancelled = false;
     const version = ++loadVersion.current;
     setApiRows([]);
@@ -245,7 +259,20 @@ export default function AdminPortal() {
     setEmpty(false);
   }
   const r = panel.resource;
-  const config = configs[r];
+  const config =
+    mode === "api"
+      ? {
+          ...configs[r],
+          columns: configs[r].columns.filter(
+            (key) =>
+              !(
+                r === "posts" && ["visibility", "deliveryStatus"].includes(key)
+              ) &&
+              !(r === "questions" && ["topicId", "chapterId"].includes(key)),
+          ),
+        }
+      : configs[r];
+  const unavailable = mode === "api" && !isApiResource(r);
   const active = (resource: Resource) =>
     store[resource].filter(
       (x) =>
@@ -292,6 +319,8 @@ export default function AdminPortal() {
     return String(row.title || row.name);
   }
   function cell(row: Row, key: string) {
+    if (mode === "api" && ["provisionedBy", "provisionedAt"].includes(key))
+      return "API 미제공";
     const v = row[key] ?? (key === "date" ? row.attendanceDate : undefined);
     if (["userId", "authorId", "provisionedBy"].includes(key))
       return v
@@ -334,6 +363,10 @@ export default function AdminPortal() {
     return String(v ?? "—");
   }
   function open(resource: Resource, row?: Row, parent = panel.parent) {
+    if (mode === "api" && !isApiResource(resource)) {
+      notify(UNAVAILABLE_MESSAGE, true);
+      return;
+    }
     if (
       resource === "questions" &&
       store.assessments.find((x) => x.id === parent)?.status !== "DRAFT"
@@ -676,28 +709,7 @@ export default function AdminPortal() {
   }
   async function delivery(row: Row) {
     await run(async () => {
-      if (mode === "api") {
-        const result = await api.request<{
-          status: string;
-          errorCode?: string;
-        }>(`/api/posts/${row.id}/discord`, "POST", {});
-        await refresh();
-        if (result.status === "FAILED")
-          throw Error(
-            result.errorCode === "DISCORD_NOT_CONFIGURED"
-              ? "서버에 Discord Webhook이 설정되어 있지 않습니다."
-              : "Discord 전송에 실패했습니다. 전송 이력을 확인하고 재시도하세요.",
-          );
-        if (result.status === "PENDING") {
-          notify(
-            "전송 결과를 확인 중입니다. 중복 방지를 위해 재전송을 차단했습니다.",
-            true,
-          );
-          return;
-        }
-        notify("Discord 공지 전송을 완료했습니다.");
-        return;
-      }
+      if (mode === "api") throw Error(UNAVAILABLE_MESSAGE);
       if (row.deliveryStatus === "SENT" || row.deliveryStatus === "PENDING")
         throw Error(
           "중복 전송을 방지했습니다. 동일 공지는 한 번만 전송됩니다.",
@@ -809,13 +821,14 @@ export default function AdminPortal() {
             }
             {r === "posts" && (
               <>
-                {["COURSE", "SYSTEM"].includes(String(row.category)) && (
-                  <button onClick={() => delivery(row)}>
-                    {row.deliveryStatus === "FAILED"
-                      ? "재시도"
-                      : "Discord 전송"}
-                  </button>
-                )}
+                {mode === "mock" &&
+                  ["COURSE", "SYSTEM"].includes(String(row.category)) && (
+                    <button onClick={() => delivery(row)}>
+                      {row.deliveryStatus === "FAILED"
+                        ? "재시도"
+                        : "Discord 전송"}
+                    </button>
+                  )}
                 {row.category === "QUESTION" && (
                   <button
                     onClick={() =>
@@ -870,7 +883,7 @@ export default function AdminPortal() {
                     navigate("questions", row.id, String(row.title))
                   }
                 >
-                  문항 / 복습 연결
+                  {mode === "mock" ? "문항 / 복습 연결" : "문항 관리"}
                 </button>
                 <button
                   disabled={row.status === "CLOSED"}
@@ -900,33 +913,45 @@ export default function AdminPortal() {
     if (!editor) return [];
     if (editor.resource === "questions") {
       const count = Math.max(2, Math.min(10, Number(draft.optionCount) || 4));
-      return configs.questions.fields.flatMap((field) =>
-        /^option[0-9]+$/.test(field.key)
-          ? field.key === "option1"
-            ? Array.from({ length: count }, (_, i) => ({
-                key: `option${i + 1}`,
-                label: `선택지 ${i + 1}`,
-              }))
-            : []
-          : [
-              field.key === "correct"
-                ? {
-                    ...field,
-                    options: Array.from({ length: count }, (_, i) =>
-                      String(i + 1),
-                    ),
-                  }
-                : field,
-            ],
-      );
+      return configs.questions.fields
+        .filter(
+          (field) =>
+            mode === "mock" || !["topicId", "chapterId"].includes(field.key),
+        )
+        .flatMap((field) =>
+          /^option[0-9]+$/.test(field.key)
+            ? field.key === "option1"
+              ? Array.from({ length: count }, (_, i) => ({
+                  key: `option${i + 1}`,
+                  label: `선택지 ${i + 1}`,
+                }))
+              : []
+            : [
+                field.key === "correct"
+                  ? {
+                      ...field,
+                      options: Array.from({ length: count }, (_, i) =>
+                        String(i + 1),
+                      ),
+                    }
+                  : field,
+              ],
+        );
     }
-    return configs[editor.resource].fields.filter(
-      (f) =>
-        editor.resource !== "users" ||
-        (editor.isNew
-          ? !["role", "status"].includes(f.key)
-          : ["role", "status"].includes(f.key)),
-    );
+    return configs[editor.resource].fields
+      .filter(
+        (f) =>
+          mode === "mock" ||
+          editor.resource !== "posts" ||
+          !["visibility", "publicSlug"].includes(f.key),
+      )
+      .filter(
+        (f) =>
+          editor.resource !== "users" ||
+          (editor.isNew
+            ? !["role", "status"].includes(f.key)
+            : ["role", "status"].includes(f.key)),
+      );
   }
   const locked =
     r === "questions" &&
@@ -1104,8 +1129,10 @@ export default function AdminPortal() {
                 <div>
                   <p>{s.title}</p>
                   <strong>
-                    {s.value}
-                    <small>{s.unit}</small>
+                    {mode === "api" && s.icon === Video ? "미제공" : s.value}
+                    <small>
+                      {mode === "api" && s.icon === Video ? "" : s.unit}
+                    </small>
                   </strong>
                   <span>{s.detail}</span>
                 </div>
@@ -1141,7 +1168,7 @@ export default function AdminPortal() {
                 </h2>
                 <p>{config.description}</p>
               </div>
-              {!config.noCreate && (
+              {!config.noCreate && !unavailable && (
                 <button
                   className="admin-primary"
                   disabled={busy || locked}
@@ -1154,8 +1181,8 @@ export default function AdminPortal() {
             </div>
             {locked && (
               <div className="admin-note">
-                게시·종료된 평가의 문항은 수정할 수 없습니다. 정답·해설·복습
-                링크는 수강생의 응시 완료와 평가 종료 후 공개됩니다.
+                게시·종료된 평가의 문항은 수정할 수 없습니다. 정답·해설은
+                수강생의 응시 완료와 평가 종료 후 공개됩니다.
               </div>
             )}
             {r === "submissions" && (
@@ -1164,21 +1191,16 @@ export default function AdminPortal() {
                 수정할 수 있습니다.
               </div>
             )}
-            {r === "questions" && (
+            {mode === "api" && r === "posts" && (
               <div className="admin-note">
-                {mode === "mock"
-                  ? "기수 성적 요약 (Mock)"
-                  : summaryError ||
-                    (() => {
-                      const current = summary.find(
-                        (x) => x.id === panel.parent,
-                      );
-                      return current
-                        ? `응시 완료 ${current.completedCount}명 · 평균 ${current.average ?? "집계 전"}`
-                        : "집계된 결과가 없습니다.";
-                    })()}
-                {mode === "mock" &&
-                  ` · 응시 완료 ${store.assessments.find((x) => x.id === panel.parent)?.completedCount || 0}명 · 기수 평균 ${store.assessments.find((x) => x.id === panel.parent)?.average ?? "집계 전"}`}
+                공개 범위·공개 링크·Discord 전송은 현재 제공되지 않습니다.
+                게시글과 첨부는 기수 회원용으로 관리합니다.
+              </div>
+            )}
+            {mode === "api" && r === "questions" && (
+              <div className="admin-note">
+                문항·선택지·정답·해설을 관리합니다. 핵심 개념 및 복습 영상
+                매핑은 현재 제공되지 않습니다.
               </div>
             )}
             <div className="admin-toolbar">
@@ -1224,7 +1246,13 @@ export default function AdminPortal() {
               </label>
               <span className="admin-count">총 {rows.length}개</span>
             </div>
-            {loadError ? (
+            {unavailable ? (
+              <div className="admin-empty">
+                <Inbox />
+                <h3>현재 제공되지 않는 기능입니다</h3>
+                <p>{UNAVAILABLE_MESSAGE}</p>
+              </div>
+            ) : loadError ? (
               <div className="admin-empty" role="alert">
                 <Inbox />
                 <h3>데이터를 불러오지 못했습니다</h3>
@@ -1339,20 +1367,58 @@ export default function AdminPortal() {
           )}
           {tab === 5 && r === "assessments" && (
             <section className="admin-tree">
-              <h2>기수 성적 통계</h2>
-              {summaryError ? (
-                <p role="alert">{summaryError}</p>
+              <h2>
+                {mode === "api" ? "수강생별 평가 결과" : "기수 성적 통계"}
+              </h2>
+              {mode === "api" ? (
+                <>
+                  <label>
+                    수강생 선택{" "}
+                    <select
+                      aria-label="평가 결과 수강생"
+                      value={reportTarget}
+                      onChange={(e) => setReportTarget(Number(e.target.value))}
+                    >
+                      <option value={0}>조회할 수강생을 선택하세요</option>
+                      {active("enrollments")
+                        .filter(
+                          (x) => x.role === "STUDENT" && x.status === "ACTIVE",
+                        )
+                        .map((x) => (
+                          <option key={x.id} value={Number(x.userId)}>
+                            {userName(x.userId)}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  {reportError ? (
+                    <p role="alert">{reportError}</p>
+                  ) : !reportTarget ? (
+                    <p>
+                      수강생을 선택하면 완료한 평가와 해당 평가의 기수 평균을
+                      조회합니다.
+                    </p>
+                  ) : reportRows.length ? (
+                    reportRows.map((x) => (
+                      <p key={x.id}>
+                        {x.title} · 점수 {x.score}점 · 해당 평가 기수 평균{" "}
+                        {Number(x.cohortAverage).toFixed(1)}점
+                      </p>
+                    ))
+                  ) : (
+                    <p>완료된 평가 결과가 없습니다.</p>
+                  )}
+                </>
               ) : !empty &&
-                (mode === "api" ? summary : active("assessments")).some(
+                active("assessments").some(
                   (x) => Number(x.completedCount) > 0,
                 ) ? (
-                (mode === "api" ? summary : active("assessments"))
+                active("assessments")
                   .filter((x) => Number(x.completedCount) > 0)
                   .map((x) => (
                     <p key={x.id}>
-                      {x.title} · 응시 완료{" "}
-                      <strong>{x.completedCount}명</strong> · 평균{" "}
-                      <strong>{Number(x.average).toFixed(1)}점</strong>
+                      {x.title} · 응시 완료 {x.completedCount}명 · 평균{" "}
+                      {x.average}점
                     </p>
                   ))
               ) : (

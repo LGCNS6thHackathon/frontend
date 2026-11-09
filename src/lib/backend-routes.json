@@ -1,0 +1,174 @@
+{
+  "/api/assessment-attempts/{id}": [
+    "get"
+  ],
+  "/api/assessment-attempts/{id}/answers": [
+    "put"
+  ],
+  "/api/assessment-attempts/{id}/submit": [
+    "post"
+  ],
+  "/api/assessment-questions/{id}": [
+    "delete",
+    "patch"
+  ],
+  "/api/assessments/{assessmentId}/attempts": [
+    "post"
+  ],
+  "/api/assessments/{assessmentId}/questions": [
+    "post"
+  ],
+  "/api/assessments/{id}": [
+    "delete",
+    "get",
+    "patch"
+  ],
+  "/api/assignments/{assignmentId}/files": [
+    "post"
+  ],
+  "/api/assignments/{assignmentId}/submission": [
+    "put"
+  ],
+  "/api/assignments/{assignmentId}/submissions": [
+    "get",
+    "post"
+  ],
+  "/api/assignments/{id}": [
+    "delete",
+    "get",
+    "patch"
+  ],
+  "/api/attendance/corrections/{id}": [
+    "patch"
+  ],
+  "/api/attendance/{attendanceId}": [
+    "delete"
+  ],
+  "/api/attendance/{attendanceId}/corrections": [
+    "post"
+  ],
+  "/api/auth/login": [
+    "post"
+  ],
+  "/api/auth/logout": [
+    "post"
+  ],
+  "/api/auth/refresh": [
+    "post"
+  ],
+  "/api/cohorts": [
+    "get"
+  ],
+  "/api/cohorts/{cohortId}": [
+    "get",
+    "patch"
+  ],
+  "/api/cohorts/{cohortId}/assessment-report": [
+    "get"
+  ],
+  "/api/cohorts/{cohortId}/assessments": [
+    "get",
+    "post"
+  ],
+  "/api/cohorts/{cohortId}/assignments": [
+    "get",
+    "post"
+  ],
+  "/api/cohorts/{cohortId}/attendance": [
+    "get",
+    "put"
+  ],
+  "/api/cohorts/{cohortId}/attendance/corrections": [
+    "get"
+  ],
+  "/api/cohorts/{cohortId}/dashboard": [
+    "get"
+  ],
+  "/api/cohorts/{cohortId}/enrollments": [
+    "get",
+    "post"
+  ],
+  "/api/cohorts/{cohortId}/enrollments/{enrollmentId}": [
+    "patch"
+  ],
+  "/api/cohorts/{cohortId}/events": [
+    "get",
+    "post"
+  ],
+  "/api/cohorts/{cohortId}/posts": [
+    "get",
+    "post"
+  ],
+  "/api/comments/{commentId}": [
+    "delete",
+    "patch"
+  ],
+  "/api/courses": [
+    "get",
+    "post"
+  ],
+  "/api/courses/{courseId}": [
+    "get",
+    "patch"
+  ],
+  "/api/courses/{courseId}/cohorts": [
+    "get",
+    "post"
+  ],
+  "/api/events/{id}": [
+    "delete",
+    "patch"
+  ],
+  "/api/files/{fileId}": [
+    "delete",
+    "get"
+  ],
+  "/api/files/{fileId}/download": [
+    "get"
+  ],
+  "/api/health": [
+    "get"
+  ],
+  "/api/me": [
+    "get",
+    "patch"
+  ],
+  "/api/me/password": [
+    "patch"
+  ],
+  "/api/notifications": [
+    "get"
+  ],
+  "/api/notifications/read-all": [
+    "post"
+  ],
+  "/api/notifications/{id}/read": [
+    "patch"
+  ],
+  "/api/posts/{postId}": [
+    "delete",
+    "get",
+    "patch"
+  ],
+  "/api/posts/{postId}/comments": [
+    "get",
+    "post"
+  ],
+  "/api/posts/{postId}/files": [
+    "post"
+  ],
+  "/api/submissions/{submissionId}/files": [
+    "get",
+    "post"
+  ],
+  "/api/submissions/{submissionId}/review": [
+    "patch"
+  ],
+  "/api/users": [
+    "get",
+    "post"
+  ],
+  "/api/users/{userId}": [
+    "patch"
+  ]
+}
