@@ -2,11 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import {
-  ExternalLink,
-  Menu,
-  ShieldAlert,
-} from "lucide-react";
+import { ExternalLink, Menu, ShieldAlert } from "lucide-react";
 
 import { ZepIcon } from "@/components/icons/zep-icon";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +33,8 @@ const TAB_TITLES: Record<NavTabId, { title: string; subtitle: string }> = {
   },
   qa: {
     title: "학습 질문",
-    subtitle: "코드 및 실습 중 발생하는 기술적 질문을 멘토단과 함께 해결합니다.",
+    subtitle:
+      "코드 및 실습 중 발생하는 기술적 질문을 멘토단과 함께 해결합니다.",
   },
   evaluation: {
     title: "역량평가",
@@ -49,20 +46,19 @@ const TAB_TITLES: Record<NavTabId, { title: string; subtitle: string }> = {
   },
   "ai-review": {
     title: "AI 복습",
-    subtitle: "오늘 학습한 핵심 내용을 요약하고 AI 생성 퀴즈로 개념을 점검합니다.",
+    subtitle:
+      "오늘 학습한 핵심 내용을 요약하고 AI 생성 퀴즈로 개념을 점검합니다.",
   },
   mypage: {
     title: "마이페이지",
-    subtitle: "수강생 개인정보, 훈련수당 지급 계좌 및 AWS 클라우드 자격증명 관리",
+    subtitle:
+      "수강생 개인정보, 훈련수당 지급 계좌 및 AWS 클라우드 자격증명 관리",
   },
 };
 
-export function AppHeader({
-  currentTab,
-  onOpenMobileMenu,
-}: HeaderProps) {
+export function AppHeader({ currentTab, onOpenMobileMenu }: HeaderProps) {
   const current = TAB_TITLES[currentTab];
-  const {cohort,user,notify}=useSession();
+  const { cohort, user, notify } = useSession();
 
   return (
     // Non-sticky header: DOES NOT follow when scrolling
@@ -99,10 +95,25 @@ export function AppHeader({
 
       {/* Right: Quick Action Buttons (High-Quality ZEP & Seat Departure Detection) */}
       <div className="flex items-center gap-2.5">
-        {user.role === "ADMIN" && <Link href="/admin" className="rounded-lg border border-border bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground whitespace-nowrap">관리자 모드 ↗</Link>}
+        {user.role === "ADMIN" && (
+          <Link
+            href="/admin"
+            className="rounded-lg border border-border bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground whitespace-nowrap"
+          >
+            관리자 모드 ↗
+          </Link>
+        )}
         {/* High-End Official ZEP Button */}
         <button
-          onClick={() => cohort?.classroomUrl ? window.open(cohort.classroomUrl, '_blank', 'noopener,noreferrer') : notify('기수에 등록된 강의실 주소가 없습니다.',true)}
+          onClick={() =>
+            cohort?.classroomUrl
+              ? window.open(
+                  cohort.classroomUrl,
+                  "_blank",
+                  "noopener,noreferrer",
+                )
+              : notify("기수에 등록된 강의실 주소가 없습니다.", true)
+          }
           className="group relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-[#6758FF] via-[#5c4cff] to-[#4e3dff] hover:from-[#5747ee] hover:to-[#4332ee] shadow-sm shadow-[#6758FF]/30 hover:shadow-md hover:shadow-[#6758FF]/40 border border-white/20 active:scale-[0.98] transition-all cursor-pointer"
         >
           <div className="flex size-4 items-center justify-center rounded bg-white/20 p-0.5 text-white group-hover:scale-110 transition-transform">
@@ -117,7 +128,12 @@ export function AppHeader({
           variant="outline"
           size="sm"
           className="gap-1.5 text-xs h-8 font-semibold border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-          onClick={() => notify('자리이탈감지 서비스는 백엔드에 연결되어 있지 않습니다.',true)}
+          onClick={() =>
+            notify(
+              "자리이탈감지 서비스는 백엔드에 연결되어 있지 않습니다.",
+              true,
+            )
+          }
         >
           <ShieldAlert className="size-3.5 text-amber-500" />
           <span>자리이탈감지</span>

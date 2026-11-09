@@ -27,6 +27,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/components/live/session";
+import { useResource } from "@/components/live/shared";
+import { api } from "@/lib/api-client";
 
 export type NavTabId =
   | "home"
@@ -64,9 +66,12 @@ export function AppSidebar({
   isDark,
   onToggleDark,
 }: SidebarProps) {
-  const [unreadCount, setUnreadCount] = React.useState(2);
+  const notifications = useResource<
+    { id: number; title: string; body: string }[]
+  >("/api/notifications?unread=true", true);
+  const unreadCount = notifications.data?.length || 0;
 
-  const {user}=useSession();
+  const { user, notify } = useSession();
   const navItems: NavGroup[] = [
     {
       group: "워크스페이스",
@@ -141,7 +146,6 @@ export function AppSidebar({
                 <span className="font-extrabold text-base tracking-tight text-foreground">
                   NEURON
                 </span>
-
               </div>
               <p className="text-[11px] text-muted-foreground font-medium">
                 LG CNS AM 캠프 6기
@@ -166,27 +170,32 @@ export function AppSidebar({
                     <button
                       key={item.id}
                       onClick={() => onTabChange(item.id)}
-                      className={`w-full flex items-center px-3 py-2.5 rounded-lg text-xs font-medium transition-all group ${isActive
-                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25 font-semibold"
-                        : item.highlight
-                          ? "hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold"
-                          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
-                        }`}
+                      className={`w-full flex items-center px-3 py-2.5 rounded-lg text-xs font-medium transition-all group ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25 font-semibold"
+                          : item.highlight
+                            ? "hover:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-semibold"
+                            : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                      }`}
                     >
                       <div className="flex items-center gap-2.5 truncate">
                         <Icon
-                          className={`size-4 shrink-0 transition-transform group-hover:scale-110 ${isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
-                            }`}
+                          className={`size-4 shrink-0 transition-transform group-hover:scale-110 ${
+                            isActive
+                              ? "text-primary-foreground"
+                              : "text-muted-foreground group-hover:text-foreground"
+                          }`}
                         />
                         <span className="truncate">{item.label}</span>
                       </div>
 
                       {item.badge && (
                         <span
-                          className={`ml-auto text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${isActive
-                            ? "bg-primary-foreground/20 text-primary-foreground"
-                            : "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25"
-                            }`}
+                          className={`ml-auto text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
+                            isActive
+                              ? "bg-primary-foreground/20 text-primary-foreground"
+                              : "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/25"
+                          }`}
                         >
                           {item.badge}
                         </span>
@@ -210,7 +219,9 @@ export function AppSidebar({
             ) : (
               <Sun className="size-3.5 text-amber-500" />
             )}
-            <span className="text-[11px] font-medium text-foreground">다크 모드</span>
+            <span className="text-[11px] font-medium text-foreground">
+              다크 모드
+            </span>
           </div>
           <Switch
             size="sm"
@@ -236,7 +247,9 @@ export function AppSidebar({
                       </span>
                     )}
                   </div>
-                  <span className="font-semibold text-foreground">새로운 알림</span>
+                  <span className="font-semibold text-foreground">
+                    새로운 알림
+                  </span>
                 </div>
                 <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full font-mono">
                   {unreadCount}개
@@ -244,18 +257,54 @@ export function AppSidebar({
               </button>
             }
           />
-          <DropdownMenuContent align="start" side="top" className="w-72 p-2 mb-2">
+          <DropdownMenuContent
+            align="start"
+            side="top"
+            className="w-72 p-2 mb-2"
+          >
             <div className="flex items-center justify-between px-2 py-1.5 border-b mb-1">
-              <span className="text-xs font-bold text-foreground">알림 피드</span>
+              <span className="text-xs font-bold text-foreground">
+                알림 피드
+              </span>
               <button
-                onClick={() => setUnreadCount(0)}
+                onClick={() =>
+                  api("/api/notifications/read-all", "POST", {})
+                    .then(() => notifications.reload())
+                    .catch((e) => notify(e.message, true))
+                }
                 className="text-[10px] text-primary hover:underline"
               >
                 모두 읽음
               </button>
             </div>
             <div className="space-y-1">
-              <p className="p-3 text-xs text-muted-foreground">실시간 알림은 대시보드에서 확인하세요.</p>
+              {notifications.error ? (
+                <p className="p-3 text-xs text-destructive">
+                  {notifications.error}
+                </p>
+              ) : notifications.data?.length ? (
+                notifications.data.slice(0, 5).map((item) => (
+                  <button
+                    key={item.id}
+                    className="block w-full rounded p-2 text-left text-xs hover:bg-muted"
+                    onClick={() =>
+                      api(`/api/notifications/${item.id}/read`, "PATCH", {})
+                        .then(() => {
+                          notifications.reload();
+                          onTabChange("home");
+                        })
+                        .catch((e) => notify(e.message, true))
+                    }
+                  >
+                    <strong>{item.title}</strong>
+                    <p className="text-muted-foreground">{item.body}</p>
+                  </button>
+                ))
+              ) : (
+                <p className="p-3 text-xs text-muted-foreground">
+                  새로운 알림이 없습니다.
+                </p>
+              )}
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -279,9 +328,7 @@ export function AppSidebar({
                 </span>
                 <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                출석률 <span className="font-semibold text-emerald-600 dark:text-emerald-400">98.5%</span> (안전)
-              </p>
+              <p className="text-[10px] text-muted-foreground">{user.email}</p>
             </div>
           </div>
           <ChevronRight className="size-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />

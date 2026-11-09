@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Isolated local build verification
 /.next-*/
+
+# Document server-only configuration without secrets
+!.env.example

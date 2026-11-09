@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Next.js 15 + shadcn/ui + Tailwind CSS 대시보드 예제",
-  description: "Next.js 15, shadcn/ui, Tailwind CSS v4를 활용한 모던 웹 애플리케이션 예제 프로젝트",
+  title: "NEURON | Inspire LMS",
+  description: "수강생 학습 포털 및 관리자 워크스페이스",
 };
 
 export default function RootLayout({
