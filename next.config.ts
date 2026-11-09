@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Keep production verification separate from an already running development server.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
 };
 
 export default nextConfig;
