@@ -61,9 +61,10 @@ import {
 
 interface EvaluationViewProps {
   onNavigate?: (tab: string) => void;
+  resetSignal?: number;
 }
 
-export function EvaluationView({ onNavigate }: EvaluationViewProps) {
+export function EvaluationView({ onNavigate, resetSignal }: EvaluationViewProps) {
   // Navigation View Modes: "list" (Hub) | "exam" (Taking exam) | "review" (Problem Solving Feedback) | "report" (Radar Report)
   const [viewMode, setViewMode] = React.useState<"list" | "exam" | "review" | "report">("list");
   const [selectedExam, setSelectedExam] = React.useState<EvaluationMeta>(WSTS_EVALUATIONS[0]);
@@ -154,6 +155,159 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  // Helper to push subview, examId, and video modal state into URL & browser history
+  const updateEvaluationUrl = React.useCallback(
+    (
+      updates: {
+        view?: "list" | "exam" | "review" | "report";
+        examId?: number;
+        video?: number | null;
+        chapter?: string | null;
+      },
+      action: "push" | "replace" = "push"
+    ) => {
+      if (typeof window === "undefined") return;
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", "evaluation");
+
+      if (updates.view !== undefined) {
+        if (updates.view === "list") {
+          url.searchParams.delete("view");
+        } else {
+          url.searchParams.set("view", updates.view);
+        }
+      }
+
+      if (updates.examId !== undefined) {
+        url.searchParams.set("examId", updates.examId.toString());
+      }
+
+      if (updates.video !== undefined) {
+        if (updates.video === null) {
+          url.searchParams.delete("video");
+        } else {
+          url.searchParams.set("video", updates.video.toString());
+        }
+      }
+
+      if (updates.chapter !== undefined) {
+        if (updates.chapter === null) {
+          url.searchParams.delete("chapter");
+        } else {
+          url.searchParams.set("chapter", updates.chapter);
+        }
+      }
+
+      const nextUrlStr = url.toString();
+      if (nextUrlStr !== window.location.href) {
+        if (action === "push") {
+          window.history.pushState({}, "", nextUrlStr);
+        } else {
+          window.history.replaceState({}, "", nextUrlStr);
+        }
+      }
+    },
+    []
+  );
+
+  // Sync state from URL (handles initial deep link + browser Back/Forward via popstate)
+  const syncStateFromUrl = React.useCallback(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam && tabParam !== "evaluation") return;
+
+    const viewParam = params.get("view") as "list" | "exam" | "review" | "report" | null;
+    const examIdParam = params.get("examId");
+    const videoParam = params.get("video");
+    const chapterParam = params.get("chapter");
+
+    // 1. Resolve selected exam
+    let targetExam = selectedExam;
+    if (examIdParam) {
+      const foundExam = WSTS_EVALUATIONS.find((e) => e.id === Number(examIdParam));
+      if (foundExam) {
+        targetExam = foundExam;
+        setSelectedExam(foundExam);
+      }
+    }
+
+    // 2. Set viewMode
+    const targetView: "list" | "exam" | "review" | "report" = viewParam || "list";
+    setViewMode(targetView);
+
+    // 3. Populate questions if in review mode
+    let currentQuestions = reviewQuestions;
+    if (targetView === "review") {
+      if (targetExam.id === 1) {
+        currentQuestions = PAST_EXAM_FEEDBACK_QUESTIONS;
+        setReviewQuestions(PAST_EXAM_FEEDBACK_QUESTIONS);
+        setExamFinalScore(targetExam.myScore || 46);
+      } else {
+        const questionsWithAnswers = INITIAL_EXAM_QUESTIONS.map((q) => {
+          const userChoice = userAnswers[q.id];
+          return {
+            ...q,
+            userAnswerIndex: userChoice !== undefined ? userChoice : q.correctIndex,
+          };
+        });
+        currentQuestions = questionsWithAnswers;
+        setReviewQuestions(questionsWithAnswers);
+        setExamFinalScore(examFinalScore || targetExam.myScore || 87);
+      }
+    } else if (targetView === "list") {
+      setActiveVideoModal(null);
+    }
+
+    // 4. Resolve video modal
+    if (videoParam) {
+      const qId = Number(videoParam);
+      const allQ = [...currentQuestions, ...INITIAL_EXAM_QUESTIONS, ...PAST_EXAM_FEEDBACK_QUESTIONS];
+      const targetQ = allQ.find((q) => q.id === qId);
+      if (targetQ && targetQ.videoClip) {
+        let ch = targetQ.videoClip.chapters.find((c) => c.isExamPoint) || targetQ.videoClip.chapters[0];
+        if (chapterParam) {
+          const foundCh = targetQ.videoClip.chapters.find((c) => c.timeStr === chapterParam);
+          if (foundCh) ch = foundCh;
+        }
+        setActiveVideoModal({ question: targetQ, selectedChapter: ch });
+        setIsVideoPlaying(true);
+      }
+    } else {
+      setActiveVideoModal(null);
+    }
+  }, [selectedExam, reviewQuestions, userAnswers, examFinalScore]);
+
+  // Handle URL popstate & mount
+  React.useEffect(() => {
+    syncStateFromUrl();
+    window.addEventListener("popstate", syncStateFromUrl);
+    return () => window.removeEventListener("popstate", syncStateFromUrl);
+  }, [syncStateFromUrl]);
+
+  // Handle resetSignal from sidebar (clicking "역량평가" resets to initial list view)
+  React.useEffect(() => {
+    if (resetSignal !== undefined && resetSignal > 0) {
+      setViewMode("list");
+      setActiveVideoModal(null);
+      setIsTimerRunning(false);
+      setIsSubmitDialogOpen(false);
+      setIsExitDialogOpen(false);
+      setIsResultModalOpen(false);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("tab", "evaluation");
+        url.searchParams.delete("view");
+        url.searchParams.delete("examId");
+        url.searchParams.delete("video");
+        url.searchParams.delete("chapter");
+        if (url.toString() !== window.location.href) {
+          window.history.pushState({}, "", url.toString());
+        }
+      }
+    }
+  }, [resetSignal]);
+
   // Start Live Exam
   const handleStartExam = (exam: EvaluationMeta) => {
     setSelectedExam(exam);
@@ -164,6 +318,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
     setTimeLeft(40 * 60);
     setIsTimerRunning(true);
     setViewMode("exam");
+    updateEvaluationUrl({ view: "exam", examId: exam.id, video: null, chapter: null });
   };
 
   // Open Problem Solving Review (WSTS problemSolving/lg06_st33 대응)
@@ -185,6 +340,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
     }
     setReviewFilter("all");
     setViewMode("review");
+    updateEvaluationUrl({ view: "review", examId: exam.id, video: null, chapter: null });
   };
 
   // View Radar Diagnostic Report
@@ -195,6 +351,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
       else if (exam.id >= 2) setActiveReportRound(2);
     }
     setViewMode("report");
+    updateEvaluationUrl({ view: "report", examId: exam?.id, video: null, chapter: null });
   };
 
   // Handle Option Select during Exam
@@ -383,7 +540,11 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
             {/* Navigation Tabs (목록 / 문제풀이 / 리포트) */}
             <div className="flex items-center rounded-lg bg-muted p-1 border border-border/40 shrink-0 self-start sm:self-auto">
               <button
-                onClick={() => setViewMode("list")}
+                onClick={() => {
+                  setViewMode("list");
+                  setActiveVideoModal(null);
+                  updateEvaluationUrl({ view: "list", video: null, chapter: null });
+                }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === "list"
                     ? "bg-background text-primary shadow-xs"
@@ -400,6 +561,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                     handleOpenReview(WSTS_EVALUATIONS[0]);
                   } else {
                     setViewMode("review");
+                    updateEvaluationUrl({ view: "review", examId: selectedExam.id, video: null, chapter: null });
                   }
                 }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
@@ -413,7 +575,10 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
               </button>
 
               <button
-                onClick={() => setViewMode("report")}
+                onClick={() => {
+                  setViewMode("report");
+                  updateEvaluationUrl({ view: "report", examId: selectedExam.id, video: null, chapter: null });
+                }}
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                   viewMode === "report"
                     ? "bg-background text-primary shadow-xs"
@@ -923,7 +1088,11 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                       variant="ghost"
                       size="sm"
                       className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground cursor-pointer"
-                      onClick={() => setViewMode("list")}
+                      onClick={() => {
+                        setViewMode("list");
+                        setActiveVideoModal(null);
+                        updateEvaluationUrl({ view: "list", video: null, chapter: null });
+                      }}
                     >
                       <ArrowLeft className="size-3" /> 평가 목록
                     </Button>
@@ -1145,11 +1314,13 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                           {/* Left: 16:9 Video Player Card Preview */}
                           <div
                             onClick={() => {
+                              const selCh = q.videoClip?.chapters.find((c) => c.isExamPoint) || q.videoClip?.chapters[0];
                               setActiveVideoModal({
                                 question: q,
-                                selectedChapter: q.videoClip?.chapters.find((c) => c.isExamPoint) || q.videoClip?.chapters[0],
+                                selectedChapter: selCh,
                               });
                               setIsVideoPlaying(true);
+                              updateEvaluationUrl({ video: q.id, chapter: selCh?.timeStr });
                             }}
                             className="md:col-span-5 group relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 shadow-md cursor-pointer aspect-video flex flex-col justify-between p-3 select-none transition-all hover:ring-2 hover:ring-indigo-500/70"
                           >
@@ -1211,6 +1382,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                                     onClick={() => {
                                       setActiveVideoModal({ question: q, selectedChapter: ch });
                                       setIsVideoPlaying(true);
+                                      updateEvaluationUrl({ video: q.id, chapter: ch.timeStr });
                                     }}
                                     className={`group/ch flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer text-xs ${
                                       ch.isExamPoint
@@ -1261,11 +1433,13 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                               size="sm"
                               variant="default"
                               onClick={() => {
+                                const selCh = q.videoClip?.chapters[0];
                                 setActiveVideoModal({
                                   question: q,
-                                  selectedChapter: q.videoClip?.chapters[0],
+                                  selectedChapter: selCh,
                                 });
                                 setIsVideoPlaying(true);
+                                updateEvaluationUrl({ video: q.id, chapter: selCh?.timeStr });
                               }}
                               className="h-8 text-xs font-semibold gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-xs"
                             >
@@ -1281,7 +1455,11 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                                 } else {
                                   const url = new URL(window.location.href);
                                   url.searchParams.set("tab", "schedule");
-                                  window.history.replaceState({}, "", url.toString());
+                                  url.searchParams.delete("view");
+                                  url.searchParams.delete("examId");
+                                  url.searchParams.delete("video");
+                                  url.searchParams.delete("chapter");
+                                  window.history.pushState({}, "", url.toString());
                                   window.dispatchEvent(new PopStateEvent("popstate"));
                                 }
                               }}
@@ -1302,7 +1480,11 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                                 } else {
                                   const url = new URL(window.location.href);
                                   url.searchParams.set("tab", "ai-review");
-                                  window.history.replaceState({}, "", url.toString());
+                                  url.searchParams.delete("view");
+                                  url.searchParams.delete("examId");
+                                  url.searchParams.delete("video");
+                                  url.searchParams.delete("chapter");
+                                  window.history.pushState({}, "", url.toString());
                                   window.dispatchEvent(new PopStateEvent("popstate"));
                                 }
                               }}
@@ -1605,6 +1787,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                 setIsExitDialogOpen(false);
                 setIsTimerRunning(false);
                 setViewMode("list");
+                updateEvaluationUrl({ view: "list", video: null, chapter: null });
               }}
               className="text-xs cursor-pointer h-8.5"
             >
@@ -1647,6 +1830,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
               onClick={() => {
                 setIsResultModalOpen(false);
                 setViewMode("report");
+                updateEvaluationUrl({ view: "report", examId: selectedExam.id, video: null, chapter: null });
               }}
               className="w-full sm:w-1/2 text-xs font-semibold cursor-pointer h-9"
             >
@@ -1657,6 +1841,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
               onClick={() => {
                 setIsResultModalOpen(false);
                 setViewMode("review");
+                updateEvaluationUrl({ view: "review", examId: selectedExam.id, video: null, chapter: null });
               }}
               className="w-full sm:w-1/2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer h-9"
             >
@@ -1675,6 +1860,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
           if (!open) {
             setActiveVideoModal(null);
             setIsVideoPlaying(false);
+            updateEvaluationUrl({ video: null, chapter: null });
           }
         }}
       >
@@ -1761,28 +1947,6 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                     <div className="flex items-center justify-between text-[11.5px] text-zinc-400 pt-1">
                       <span>📌 출제 문제: {activeVideoModal.question.question.slice(0, 48)}...</span>
                       <span className="text-amber-400 font-semibold font-mono">배점 {activeVideoModal.question.points}점</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Instructor Webcam PiP */}
-                <div className="absolute bottom-16 right-4 sm:right-6 z-20 w-32 sm:w-40 rounded-xl overflow-hidden border border-zinc-700 bg-zinc-900/90 shadow-xl p-2.5 backdrop-blur-sm">
-                  <div className="flex items-center justify-between text-[10px] pb-1 border-b border-zinc-800">
-                    <span className="text-rose-400 font-bold flex items-center gap-1 font-mono">
-                      <span className="size-1.5 rounded-full bg-rose-500 animate-pulse" />
-                      LIVE
-                    </span>
-                    <span className="text-zinc-400 truncate font-sans">
-                      {activeVideoModal.question.videoClip.instructor}
-                    </span>
-                  </div>
-                  <div className="h-10 sm:h-12 flex items-center justify-center bg-zinc-950 rounded mt-1.5 text-zinc-500 text-xs">
-                    <div className="flex items-center gap-1">
-                      <span className="size-1 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                      <span className="size-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                      <span className="size-2 bg-indigo-500 rounded-full animate-bounce" />
-                      <span className="size-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                      <span className="size-1 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
                     </div>
                   </div>
                 </div>
@@ -1892,6 +2056,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                               selectedChapter: ch,
                             });
                             setIsVideoPlaying(true);
+                            updateEvaluationUrl({ chapter: ch.timeStr }, "replace");
                           }}
                           className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
                             isSelected
@@ -1941,13 +2106,16 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        setActiveVideoModal(null);
                         if (onNavigate) {
                           onNavigate("schedule");
                         } else {
                           const url = new URL(window.location.href);
                           url.searchParams.set("tab", "schedule");
-                          window.history.replaceState({}, "", url.toString());
+                          url.searchParams.delete("view");
+                          url.searchParams.delete("examId");
+                          url.searchParams.delete("video");
+                          url.searchParams.delete("chapter");
+                          window.history.pushState({}, "", url.toString());
                           window.dispatchEvent(new PopStateEvent("popstate"));
                         }
                       }}
@@ -1960,13 +2128,16 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        setActiveVideoModal(null);
                         if (onNavigate) {
                           onNavigate("ai-review");
                         } else {
                           const url = new URL(window.location.href);
                           url.searchParams.set("tab", "ai-review");
-                          window.history.replaceState({}, "", url.toString());
+                          url.searchParams.delete("view");
+                          url.searchParams.delete("examId");
+                          url.searchParams.delete("video");
+                          url.searchParams.delete("chapter");
+                          window.history.pushState({}, "", url.toString());
                           window.dispatchEvent(new PopStateEvent("popstate"));
                         }
                       }}
@@ -1982,6 +2153,7 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                     onClick={() => {
                       setActiveVideoModal(null);
                       setIsVideoPlaying(false);
+                      updateEvaluationUrl({ video: null, chapter: null });
                     }}
                     className="h-8.5 text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white cursor-pointer px-4"
                   >
