@@ -187,6 +187,7 @@ export const configs: Record<Resource, Config> = {
       { key: "lectureDate", label: "교육 날짜", type: "date" },
       { key: "periodNo", label: "교시", type: "number", min: 1, initial: 1 },
       { key: "youtubeUrl", label: "YouTube URL", type: "url" },
+      { key: "durationSeconds", label: "영상 길이 (초)", type: "number", min: 1, optional: true },
       { key: "visibility", label: "공개 상태", options: ["PUBLIC", "PRIVATE"] },
     ],
   },
@@ -242,6 +243,7 @@ export const configs: Record<Resource, Config> = {
     fields: [
       title,
       { key: "instructorId", label: "담당 강사", ref: "users" },
+      { key: "subject", label: "과목", optional: true },
       { key: "dueAt", label: "제출 기한 (한국 시간)", type: "datetime-local" },
       {
         key: "maxScore",

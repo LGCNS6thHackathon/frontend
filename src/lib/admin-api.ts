@@ -86,6 +86,10 @@ export function createAdminApi(
     switch (resource) {
       case "courses":
         return "/api/courses";
+      case "videos":
+        return `/api/admin/cohorts/${cohortId}/lecture-videos`;
+      case "posts":
+        return `/api/admin/cohorts/${cohortId}/posts`;
       case "users":
         return "/api/users";
       case "cohorts":
@@ -101,6 +105,7 @@ export function createAdminApi(
     }
   }
   const item = (resource: Resource, id: number) =>
+    resource === "videos" ? `/api/admin/lecture-videos/${id}` : resource === "posts" ? `/api/admin/posts/${id}` :
     `/api/${resource === "corrections" ? "attendance/corrections" : resource === "questions" ? "assessment-questions" : resource}/${id}`;
   return {
     request,
@@ -132,7 +137,7 @@ export function createAdminApi(
       const detailed =
         resource === "posts"
           ? await Promise.all(
-              all.map((row) => request<RawRow>(`/api/posts/${row.id}`)),
+              all.map((row) => request<RawRow>(`/api/admin/posts/${row.id}`)),
             )
           : all;
       const parentField: Partial<Record<Resource, string>> = {
@@ -179,6 +184,7 @@ export function createAdminApi(
           "현재 회원 API의 전역 역할에는 MANAGER가 없습니다. 기수 배정에서 MANAGER로 지정하세요.",
         );
       const keys: Partial<Record<Resource, string[]>> = {
+        videos: ["title", "youtubeUrl", "lectureDate", "periodNo", "durationSeconds", "visibility"],
         courses: ["title", "description", "totalHours"],
         events: [
           "title",
@@ -212,6 +218,7 @@ export function createAdminApi(
           "maxScore",
           "instructorId",
           "instructorName",
+          "subject",
         ],
         submissions: ["score", "feedback"],
         assessments: [
@@ -222,7 +229,7 @@ export function createAdminApi(
           "endAt",
           "durationMinutes",
         ],
-        questions: ["prompt", "explanation", "points"],
+        questions: ["prompt", "explanation", "points", "topicId", "chapterId"],
       };
       const payload: Record<string, unknown> = {};
       for (const key of keys[resource] || [])

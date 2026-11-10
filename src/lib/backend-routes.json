@@ -1,4 +1,22 @@
 {
+  "/api/admin/cohorts/{cohortId}/lecture-videos": [
+    "get",
+    "post"
+  ],
+  "/api/admin/cohorts/{cohortId}/posts": [
+    "get",
+    "post"
+  ],
+  "/api/admin/lecture-videos/{videoId}": [
+    "delete",
+    "get",
+    "patch"
+  ],
+  "/api/admin/posts/{postId}": [
+    "delete",
+    "get",
+    "patch"
+  ],
   "/api/assessment-attempts/{id}": [
     "get"
   ],
@@ -17,6 +35,12 @@
   ],
   "/api/assessments/{assessmentId}/questions": [
     "post"
+  ],
+  "/api/assessments/{assessmentId}/review-guide": [
+    "get"
+  ],
+  "/api/assessments/{assessmentId}/review-recommendations": [
+    "get"
   ],
   "/api/assessments/{id}": [
     "delete",
@@ -78,10 +102,16 @@
     "get",
     "put"
   ],
+  "/api/cohorts/{cohortId}/attendance/calendar": [
+    "get"
+  ],
   "/api/cohorts/{cohortId}/attendance/corrections": [
     "get"
   ],
   "/api/cohorts/{cohortId}/dashboard": [
+    "get"
+  ],
+  "/api/cohorts/{cohortId}/discord-deliveries": [
     "get"
   ],
   "/api/cohorts/{cohortId}/enrollments": [
@@ -94,6 +124,24 @@
   "/api/cohorts/{cohortId}/events": [
     "get",
     "post"
+  ],
+  "/api/cohorts/{cohortId}/lecture-chapters/{chapterId}/playback": [
+    "get"
+  ],
+  "/api/cohorts/{cohortId}/lecture-replays": [
+    "get"
+  ],
+  "/api/cohorts/{cohortId}/lecture-replays/dates": [
+    "get"
+  ],
+  "/api/cohorts/{cohortId}/lecture-replays/recent": [
+    "get"
+  ],
+  "/api/cohorts/{cohortId}/lecture-videos": [
+    "get"
+  ],
+  "/api/cohorts/{cohortId}/lecture-videos/{videoId}/playback": [
+    "get"
   ],
   "/api/cohorts/{cohortId}/posts": [
     "get",
@@ -129,6 +177,9 @@
   "/api/health": [
     "get"
   ],
+  "/api/lecture-videos/{videoId}": [
+    "get"
+  ],
   "/api/me": [
     "get",
     "patch"
@@ -151,6 +202,10 @@
     "patch"
   ],
   "/api/posts/{postId}/comments": [
+    "get",
+    "post"
+  ],
+  "/api/posts/{postId}/discord-delivery": [
     "get",
     "post"
   ],

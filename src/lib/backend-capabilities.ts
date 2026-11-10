@@ -1,6 +1,7 @@
 import type { Resource } from "./admin-model";
-// Only resources with controllers in the team's existing backend main.
+// Only resources with controllers in the backend develop contract (6db3a25).
 export const API_RESOURCES: readonly Resource[] = [
+  "videos",
   "courses",
   "events",
   "users",
