@@ -167,8 +167,17 @@ export default function AdminPortal() {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Object.keys(seed()).every((k) => Array.isArray(parsed[k])))
+        if (Object.keys(seed()).every((k) => Array.isArray(parsed[k]))) {
+          const restored = parsed as Store;
+          restored.users = restored.users.map(user =>
+            ["INSTRUCTOR", "MANAGER"].includes(String(user.role)) || restored.enrollments.some(e =>
+              e.userId === user.id && e.status === "ACTIVE" && ["INSTRUCTOR", "MANAGER"].includes(String(e.role)))
+              ? { ...user, role: "ADMIN" } : user);
+          restored.enrollments = restored.enrollments.map(e => ({ ...e,
+            role: restored.users.find(user => user.id === e.userId)?.role ?? "STUDENT",
+          }));
           setStore(parsed);
+        }
       }
     } catch {}
     setReady(true);
@@ -406,7 +415,10 @@ export default function AdminPortal() {
       initial.authorId = session.user.id;
     }
     setEditor({ resource, row: row || initial, isNew, parent });
-    setDraft({ ...initial, ...row });
+    const values = { ...initial, ...row };
+    if (resource === "enrollments")
+      values.role = store.users.find(user => user.id === Number(values.userId))?.role ?? values.role;
+    setDraft(values);
     setFile(null);
   }
   function patch(resource: Resource, id: number, changes: Partial<Row>) {
@@ -953,6 +965,11 @@ export default function AdminPortal() {
   }
   function fields(): Field[] {
     if (!editor) return [];
+    if (editor.resource === "enrollments") {
+      const role = store.users.find(user => user.id === Number(draft.userId))?.role;
+      return configs.enrollments.fields.map(field => field.key === "role" && role
+        ? { ...field, options: [String(role)] } : field);
+    }
     if (editor.resource === "questions") {
       const count = Math.max(2, Math.min(10, Number(draft.optionCount) || 4));
       return configs.questions.fields
@@ -1548,7 +1565,11 @@ export default function AdminPortal() {
                         required={!f.optional}
                         value={String(draft[f.key] ?? "")}
                         onChange={(e) =>
-                          setDraft({ ...draft, [f.key]: e.target.value })
+                          setDraft({ ...draft, [f.key]: e.target.value,
+                            ...(editor?.resource === "enrollments" && f.key === "userId"
+                              ? { role: store.users.find(user => user.id === Number(e.target.value))?.role ?? "STUDENT" }
+                              : {}),
+                          })
                         }
                       >
                         {f.ref && (

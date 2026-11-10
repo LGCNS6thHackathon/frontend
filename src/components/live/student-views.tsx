@@ -14,6 +14,7 @@ import { useSession } from "./session";
 import { State, Files, useResource, useMutation, fieldClass } from "./shared";
 import { LectureArchive, AssessmentReview } from "./lecture-views";
 import { labels, today } from "@/lib/admin-model";
+import { eventOnKoreanDay } from "@/lib/calendar";
 type Post = {
   id: number;
   title: string;
@@ -37,7 +38,8 @@ type Assignment = {
   id: number;
   title: string;
   description: string;
-  instructorName: string;
+  instructorName: string | null;
+  author?: string;
   subject: string;
   dueAt: string;
   maxScore: number;
@@ -536,7 +538,7 @@ export function LiveAssignments() {
               <Badge variant="secondary">{x.status}</Badge>
             </div>
             <p className="text-xs text-muted-foreground">
-              {x.subject} · {x.instructorName || "담당 강사 미지정"} · 마감{" "}
+              {x.subject} · {x.instructorName || x.author || "담당 강사 미지정"} · 마감{" "}
               {koreanTime(x.dueAt)}
             </p>
           </CardHeader>
@@ -725,12 +727,7 @@ export function LiveSchedule() {
                   >
                     <strong>{i + 1}</strong>
                     {events.data
-                      ?.filter(
-                        (e) =>
-                          new Intl.DateTimeFormat("sv-SE", {
-                            timeZone: "Asia/Seoul",
-                          }).format(new Date(e.startAt)) === day,
-                      )
+                      ?.filter((e) => eventOnKoreanDay(e, day))
                       .map((e) => (
                         <div key={e.id} className="mt-2 rounded bg-muted p-1">
                           {e.title}

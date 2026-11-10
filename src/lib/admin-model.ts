@@ -131,7 +131,7 @@ export function seed(): Store {
         id: 4,
         name: "정현우",
         email: "hyunwoo@inspire.camp",
-        role: "INSTRUCTOR",
+        role: "ADMIN",
         status: "ACTIVE",
         provisionedBy: 1,
         provisionedAt: "2026-11-01T00:00:00Z",
@@ -167,7 +167,7 @@ export function seed(): Store {
     enrollments: [
       { id: 1, cohortId: 1, userId: 2, role: "STUDENT", status: "ACTIVE" },
       { id: 2, cohortId: 1, userId: 3, role: "STUDENT", status: "ACTIVE" },
-      { id: 3, cohortId: 1, userId: 4, role: "INSTRUCTOR", status: "ACTIVE" },
+      { id: 3, cohortId: 1, userId: 4, role: "ADMIN", status: "ACTIVE" },
       { id: 4, cohortId: 1, userId: 5, role: "STUDENT", status: "ACTIVE" },
     ],
     attendance: ["ABSENT", "LATE", "EXCUSED", "LEAVE", "EARLY", "PRESENT"].map(

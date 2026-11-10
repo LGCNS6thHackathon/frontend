@@ -28,7 +28,7 @@ const directory = await mkdtemp(join(tmpdir(), "lms-contract-"));
 const calls = [];
 const originalFetch = globalThis.fetch;
 try {
-  for (const name of ["api-client", "backend-capabilities", "admin-api"]) {
+  for (const name of ["api-client", "backend-capabilities", "admin-api", "calendar"]) {
     const source = await readFile(
       new URL(`../src/lib/${name}.ts`, import.meta.url),
       "utf8",
@@ -117,6 +117,7 @@ try {
   assert.equal(calls.at(-1).body.options.length, 2);
   assert.equal(calls.at(-1).body.topicId, 99);
   assert.equal(calls.at(-1).body.chapterId, 88);
+  assert.equal(calls.at(-1).body.position, 1);
   await client.save("videos", { id: 8, title: "강의", lectureDate: "2026-11-10", periodNo: 1, youtubeUrl: "https://youtu.be/abcdefghijk", visibility: "PRIVATE", durationSeconds: 120 }, true);
   assert.equal(calls.at(-1).path, "/api/admin/cohorts/7/lecture-videos");
   assert.equal(calls.at(-1).body.durationSeconds, 120);
@@ -141,12 +142,36 @@ try {
   }
   await client.save(
     "enrollments",
-    { id: 9, role: "INSTRUCTOR", status: "ACTIVE" },
+    { id: 9, role: "ADMIN", status: "ACTIVE" },
     false,
   );
   assert.equal(calls.at(-1).path, "/api/cohorts/7/enrollments/9");
+  assert.equal(calls.at(-1).body.role, "ADMIN");
+  for (const resource of ["users", "enrollments"]) {
+    for (const role of ["INSTRUCTOR", "MANAGER"]) {
+      const before = calls.length;
+      await assert.rejects(() => client.save(resource, { id: 9, role }, false), e => e.status === 400);
+      assert.equal(calls.length, before);
+    }
+  }
   const oldFetch = globalThis.fetch;
   try {
+    const questionCalls = [];
+    globalThis.fetch = async (path, options = {}) => {
+      questionCalls.push({ path, method: options.method || "GET", body: options.body ? JSON.parse(options.body) : null });
+      return Response.json(options.method === "POST" ? { id: 4 } : { questions: [{ position: 1 }, { position: 3 }] });
+    };
+    await client.save("questions", { id: 0, prompt: "다음 문항", optionCount: 2, option1: "가", option2: "나", correct: 1 }, true, 5);
+    assert.equal(questionCalls[0].path, "/api/assessments/5");
+    assert.equal(questionCalls.at(-1).body.position, 4, "deleted positions must not cause duplicate numbering");
+    await client.save("questions", { id: 0, prompt: "지정 순번", position: 7, optionCount: 2, option1: "가", option2: "나", correct: 1 }, true, 5);
+    assert.equal(questionCalls.length, 3, "explicit positions need no additional lookup");
+    assert.equal(questionCalls.at(-1).body.position, 7);
+    globalThis.fetch = async () => Response.json({ items: [
+      { id: 1, instructorName: null, author: "등록 관리자" },
+      { id: 2, instructorName: "기존 담당자", author: "등록 관리자" },
+    ], total: 2 });
+    assert.deepEqual((await client.list("assignments")).map(row => row.instructorName), ["등록 관리자", "기존 담당자"]);
     const videoCalls = [];
     globalThis.fetch = async path => {
       videoCalls.push(path);
@@ -157,6 +182,14 @@ try {
     assert.equal(videoCalls.length, 2);
     assert.ok(videoCalls.every(path => path.startsWith("/api/admin/cohorts/7/lecture-videos?")));
   } finally { globalThis.fetch = oldFetch; }
+  const { eventOnKoreanDay } = await import(pathToFileURL(join(directory, "calendar.mjs")));
+  const hackathon = { startAt: "2026-11-08T15:00:00Z", endAt: "2026-11-10T15:00:00Z" };
+  assert.equal(eventOnKoreanDay(hackathon, "2026-11-08"), false);
+  assert.equal(eventOnKoreanDay(hackathon, "2026-11-09"), true);
+  assert.equal(eventOnKoreanDay(hackathon, "2026-11-10"), true);
+  assert.equal(eventOnKoreanDay(hackathon, "2026-11-11"), false, "end midnight must not occupy the next day");
+  assert.equal(eventOnKoreanDay({ startAt: "2026-10-31T14:00:00Z", endAt: "2026-10-31T16:00:00Z" }, "2026-11-01"), true);
+  assert.equal(eventOnKoreanDay({ startAt: "2026-11-09T15:00:00Z", endAt: "2026-11-09T16:00:00Z" }, "2026-11-10"), true);
   for (const call of calls) {
     assert.ok(
       Object.entries(routes).some(
@@ -170,7 +203,7 @@ try {
     );
   }
   console.log(
-    "PASS: 97 backend-develop operations match the frontend route snapshot; unsupported resources never fetch; PUT required fields and supported payloads are preserved.",
+    "PASS: 97 backend-develop operations match; request payloads, question positions, ADMIN/STUDENT roles, and KST multi-day calendar boundaries are verified.",
   );
 } finally {
   globalThis.fetch = originalFetch;

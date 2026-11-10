@@ -82,7 +82,7 @@ export const configs: Record<Resource, Config> = {
       {
         key: "role",
         label: "권한",
-        options: ["STUDENT", "INSTRUCTOR", "ADMIN"],
+        options: ["STUDENT", "ADMIN"],
       },
       { key: "status", label: "계정 상태", options: ["ACTIVE", "DISABLED"] },
     ],
@@ -102,14 +102,14 @@ export const configs: Record<Resource, Config> = {
   enrollments: {
     title: "기수 배정",
     singular: "기수 배정",
-    description: "수강생·강사·매니저의 기수 소속을 지정합니다.",
+    description: "수강생·관리자의 기수 소속을 지정합니다. 등록 역할은 계정 권한을 따릅니다.",
     columns: ["userId", "role", "status"],
     fields: [
       user,
       {
         key: "role",
         label: "등록 역할",
-        options: ["STUDENT", "INSTRUCTOR", "MANAGER"],
+        options: ["STUDENT", "ADMIN"],
       },
       { key: "status", label: "등록 상태", options: ["ACTIVE", "WITHDRAWN"] },
     ],
