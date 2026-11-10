@@ -16,6 +16,7 @@ export default function LmsPortalPage() {
   const [currentTab, setCurrentTab] = React.useState<NavTabId>("home");
   const [isDark, setIsDark] = React.useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [evalResetKey, setEvalResetKey] = React.useState(0);
 
   // Initialize theme from localStorage/system and URL query tab on mount
   React.useEffect(() => {
@@ -60,13 +61,38 @@ export default function LmsPortalPage() {
   }, []);
 
   const handleTabChange = (tab: NavTabId) => {
-    setCurrentTab(tab);
     setIsMobileMenuOpen(false);
-    // Update URL query without full reload
+
+    // If user clicks the tab they are already on (especially "evaluation" to reset to initial hub)
+    if (tab === currentTab) {
+      if (tab === "evaluation") {
+        setEvalResetKey((prev) => prev + 1);
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href);
+          url.searchParams.set("tab", "evaluation");
+          url.searchParams.delete("view");
+          url.searchParams.delete("examId");
+          url.searchParams.delete("video");
+          url.searchParams.delete("chapter");
+          if (url.toString() !== window.location.href) {
+            window.history.pushState({}, "", url.toString());
+          }
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
+      }
+      return;
+    }
+
+    setCurrentTab(tab);
+    // Push new history entry so browser Back works naturally
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.set("tab", tab);
-      window.history.replaceState({}, "", url.toString());
+      url.searchParams.delete("view");
+      url.searchParams.delete("examId");
+      url.searchParams.delete("video");
+      url.searchParams.delete("chapter");
+      window.history.pushState({}, "", url.toString());
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
@@ -127,12 +153,17 @@ export default function LmsPortalPage() {
 
         <main className="flex-1 container mx-auto px-4 py-6 sm:px-8 max-w-7xl animate-in fade-in-50 duration-200">
           {currentTab === "home" && <HomeView onNavigate={handleTabChange} />}
-          {currentTab === "schedule" && <ScheduleView />}
+          {currentTab === "schedule" && <ScheduleView onNavigate={handleTabChange} />}
           {currentTab === "notices" && <NoticesView />}
           {currentTab === "qa" && <QaView />}
-          {currentTab === "evaluation" && <EvaluationView />}
+          {currentTab === "evaluation" && (
+            <EvaluationView
+              onNavigate={handleTabChange}
+              resetSignal={evalResetKey}
+            />
+          )}
           {currentTab === "assignment" && <AssignmentView />}
-          {currentTab === "ai-review" && <AiReviewView />}
+          {currentTab === "ai-review" && <AiReviewView onNavigate={handleTabChange} />}
           {currentTab === "mypage" && <MyPageView />}
         </main>
 

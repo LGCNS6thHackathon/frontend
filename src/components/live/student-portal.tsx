@@ -65,13 +65,36 @@ export default function LmsPortalPage() {
   }, []);
 
   const handleTabChange = (tab: NavTabId) => {
-    setCurrentTab(tab);
     setIsMobileMenuOpen(false);
-    // Update URL query without full reload
+
+    if (tab === currentTab) {
+      if (tab === "evaluation") {
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href);
+          url.searchParams.set("tab", "evaluation");
+          url.searchParams.delete("view");
+          url.searchParams.delete("examId");
+          url.searchParams.delete("video");
+          url.searchParams.delete("chapter");
+          if (url.toString() !== window.location.href) {
+            window.history.pushState({}, "", url.toString());
+          }
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        }
+      }
+      return;
+    }
+
+    setCurrentTab(tab);
+    // Update URL query with pushState
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.set("tab", tab);
-      window.history.replaceState({}, "", url.toString());
+      url.searchParams.delete("view");
+      url.searchParams.delete("examId");
+      url.searchParams.delete("video");
+      url.searchParams.delete("chapter");
+      window.history.pushState({}, "", url.toString());
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
