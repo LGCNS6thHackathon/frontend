@@ -58,7 +58,7 @@ function client() {
     },
   };
 }
-// Run only against an isolated instance of the unchanged backend main.
+// Run only against an isolated instance of backend develop.
 const admin = client(),
   student = client(),
   anonymous = client();
@@ -100,7 +100,7 @@ for (const [method, path] of [
   );
   assert.equal(result.data.code, "API_NOT_SUPPORTED");
 }
-check(true, "main에 없는 API는 백엔드에 전달하지 않음");
+check(true, "미지원 API는 백엔드에 전달하지 않음");
 const date = (offset = 0) =>
   new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(
     new Date(Date.now() + offset * 86400000),
@@ -434,4 +434,4 @@ check(
 await student.call("POST", "/api/auth/logout", {}, 204);
 await student.call("GET", "/api/me", undefined, 401);
 check(true, "로그아웃");
-console.log(`Passed ${checks} checks using only existing backend-main APIs.`);
+console.log(`Passed ${checks} checks against backend develop APIs.`);

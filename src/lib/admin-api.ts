@@ -18,6 +18,8 @@ type Page = {
 function normalize(resource: Resource, raw: RawRow): Row {
   const row = { ...raw } as Row;
   if (resource === "attendance") row.date = String(raw.attendanceDate);
+  if (resource === "assignments")
+    row.instructorName = String(raw.instructorName || raw.author || "");
   if (resource === "submissions")
     row.status = raw.score == null ? "SUBMITTED" : "REVIEWED";
   if (resource === "questions" && Array.isArray(raw.options)) {
@@ -178,10 +180,11 @@ export function createAdminApi(
       original?: Row,
     ) {
       check(resource);
-      if (resource === "users" && !isNew && data.role === "MANAGER")
+      if (["users", "enrollments"].includes(resource) && data.role != null &&
+          !["ADMIN", "STUDENT"].includes(String(data.role)))
         throw new ApiError(
-          501,
-          "현재 회원 API의 전역 역할에는 MANAGER가 없습니다. 기수 배정에서 MANAGER로 지정하세요.",
+          400,
+          "권한은 관리자 또는 수강생이어야 합니다.",
         );
       const keys: Partial<Record<Resource, string[]>> = {
         videos: ["title", "youtubeUrl", "lectureDate", "periodNo", "durationSeconds", "visibility"],
@@ -229,7 +232,7 @@ export function createAdminApi(
           "endAt",
           "durationMinutes",
         ],
-        questions: ["prompt", "explanation", "points", "topicId", "chapterId"],
+        questions: ["prompt", "explanation", "points", "topicId", "chapterId", "position"],
       };
       const payload: Record<string, unknown> = {};
       for (const key of keys[resource] || [])
@@ -278,12 +281,19 @@ export function createAdminApi(
           "POST",
           payload,
         );
-      if (resource === "questions" && isNew)
+      if (resource === "questions" && isNew) {
+        if (payload.position == null) {
+          const assessment = await request<{ questions: { position: number }[] }>(
+            `/api/assessments/${parent}`,
+          );
+          payload.position = Math.max(0, ...(assessment.questions || []).map(q => q.position)) + 1;
+        }
         return request<Row>(
           `/api/assessments/${parent}/questions`,
           "POST",
           payload,
         );
+      }
       return request<Row>(
         isNew ? collection(resource, parent) : item(resource, data.id),
         isNew ? "POST" : "PATCH",
