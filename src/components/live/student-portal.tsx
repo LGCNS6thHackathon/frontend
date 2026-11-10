@@ -5,15 +5,15 @@ import { AppSidebar, NavTabId } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
 
 import {
-  LiveHome,
-  LiveSchedule,
   LivePosts,
-  LiveAssignments,
-  LiveAssessments,
   LiveProfile,
-  LiveReview,
-  LiveNotifications,
 } from "@/components/live/student-views";
+import { HomeView } from "@/components/views/home-view";
+import { AssignmentView } from "@/components/views/assignment-view";
+import { QaView } from "@/components/views/qa-view";
+import { AiReviewView } from "@/components/views/ai-review-view";
+import { ScheduleView } from "@/components/views/schedule-view";
+import { EvaluationView } from "@/components/views/evaluation-view";
 import { SessionToolbar, useSession } from "@/components/live/session";
 
 export default function LmsPortalPage() {
@@ -136,15 +136,15 @@ export default function LmsPortalPage() {
             <LiveProfile />
           ) : cohort ? (
             <div key={cohort.id} className="space-y-6">
-              {currentTab === "home" && <LiveHome />}
-              {currentTab === "schedule" && <LiveSchedule />}
+              {currentTab === "home" && <HomeView onNavigate={handleTabChange} />}
+              {/* These demo pages intentionally use local fixtures in API mode. */}
+              {currentTab === "schedule" && <ScheduleView onNavigate={tab => handleTabChange(tab as NavTabId)} />}
               {currentTab === "notices" && <LivePosts />}
-              {currentTab === "qa" && <LivePosts question />}
-              {currentTab === "evaluation" && <LiveAssessments />}
-              {currentTab === "assignment" && <LiveAssignments />}
-              {currentTab === "ai-review" && <LiveReview />}
+              {currentTab === "qa" && <QaView />}
+              {currentTab === "evaluation" && <EvaluationView onNavigate={tab => handleTabChange(tab as NavTabId)} />}
+              {currentTab === "assignment" && <AssignmentView />}
+              {currentTab === "ai-review" && <AiReviewView />}
 
-              {currentTab === "home" && <LiveNotifications />}
             </div>
           ) : (
             <div className="rounded-xl border bg-card p-8 text-sm text-muted-foreground">
