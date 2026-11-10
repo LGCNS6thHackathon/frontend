@@ -1,6 +1,7 @@
 import discordRoutes from "@/lib/discord-routes.json";
 import backendRoutes from "@/lib/backend-routes.json";
 import { IS_MOCK } from "@/lib/data-mode";
+import { isSameOrigin, withSessionCookies as cookies } from "@/lib/auth-cookies";
 import { NextRequest, NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,33 +10,6 @@ const backend = (process.env.BACKEND_URL || "http://127.0.0.1:8080").replace(
   "",
 );
 const refreshing = new Map<string, Promise<Response>>();
-function cookies(
-  response: NextResponse,
-  tokens?: {
-    accessToken: string;
-    refreshToken: string;
-    expiresIn: number;
-    refreshExpiresIn: number;
-  },
-) {
-  const options = {
-    httpOnly: true,
-    secure:
-      process.env.NODE_ENV === "production" &&
-      process.env.COOKIE_SECURE !== "false",
-    sameSite: "lax" as const,
-    path: "/",
-  };
-  response.cookies.set("lms_access", tokens?.accessToken || "", {
-    ...options,
-    maxAge: tokens?.expiresIn || 0,
-  });
-  response.cookies.set("lms_refresh", tokens?.refreshToken || "", {
-    ...options,
-    maxAge: tokens?.refreshExpiresIn || 0,
-  });
-  return response;
-}
 async function proxy(
   req: NextRequest,
   context: { params: Promise<{ path: string[] }> },
@@ -71,7 +45,7 @@ async function proxy(
 
   if (!["GET", "HEAD"].includes(req.method)) {
     const origin = req.headers.get("origin");
-    if (origin && origin !== req.nextUrl.origin)
+    if (origin && !isSameOrigin(req))
       return NextResponse.json(
         { message: "요청 출처를 확인해주세요." },
         { status: 403 },
