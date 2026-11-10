@@ -6,6 +6,7 @@ export type Field = {
   options?: string[];
   ref?: Resource;
   optional?: boolean;
+  readOnly?: boolean;
   min?: number;
   max?: number;
   initial?: string | number;
@@ -238,11 +239,11 @@ export const configs: Record<Resource, Config> = {
   assignments: {
     title: "과제 목록",
     singular: "과제",
-    description: "담당 강사와 등록자를 구분하고 제출 기한·배점을 설정합니다.",
+    description: "등록한 관리자가 담당자로 자동 지정됩니다. 제출 기한·배점을 설정하세요.",
     columns: ["title", "instructorName", "dueAt", "maxScore", "authorId"],
     fields: [
       title,
-      { key: "instructorId", label: "담당 강사", ref: "users" },
+      { key: "instructorName", label: "담당자", readOnly: true, optional: true },
       { key: "subject", label: "과목", optional: true },
       { key: "dueAt", label: "제출 기한 (한국 시간)", type: "datetime-local" },
       {
@@ -384,7 +385,7 @@ export const columnLabels: Record<string, string> = {
   startSeconds: "시작(초)",
   topicId: "핵심 개념",
   description: "설명",
-  instructorName: "담당 강사",
+  instructorName: "담당자",
   dueAt: "제출 기한",
   maxScore: "만점",
   submittedAt: "최종 업로드",

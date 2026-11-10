@@ -400,6 +400,11 @@ export default function AdminPortal() {
                 : "");
     });
     if (conf.parent) initial[conf.parent] = parent;
+    if (resource === "assignments" && isNew) {
+      initial.instructorId = session.user.id;
+      initial.instructorName = session.user.name;
+      initial.authorId = session.user.id;
+    }
     setEditor({ resource, row: row || initial, isNew, parent });
     setDraft({ ...initial, ...row });
     setFile(null);
@@ -550,9 +555,10 @@ export default function AdminPortal() {
         data.provisionedBy = 1;
         data.provisionedAt = new Date().toISOString();
       }
-      if (resource === "assignments") {
-        data.instructorName = String(userName(data.instructorId));
-        data.authorId = data.authorId || 1;
+      if (resource === "assignments" && isNew) {
+        data.instructorId = session.user.id;
+        data.instructorName = session.user.name;
+        data.authorId = session.user.id;
       }
       if (resource === "assessments" && isNew) data.status = "DRAFT";
       if (resource === "comments" && mode === "mock")
@@ -1557,18 +1563,6 @@ export default function AdminPortal() {
                         ))}
                         {f.ref &&
                           active(f.ref)
-                            .filter(
-                              (x) =>
-                                f.key !== "instructorId" ||
-                                (x.role === "INSTRUCTOR" &&
-                                  store.enrollments.some(
-                                    (e) =>
-                                      e.cohortId === cohort &&
-                                      e.userId === x.id &&
-                                      e.role === "INSTRUCTOR" &&
-                                      e.status === "ACTIVE",
-                                  )),
-                            )
                             .map((x) => (
                               <option key={x.id} value={x.id}>
                                 {refLabel(f.ref!, x)}
@@ -1616,6 +1610,7 @@ export default function AdminPortal() {
                     ) : (
                       <input
                         type={f.type || "text"}
+                        readOnly={f.readOnly}
                         required={!f.optional}
                         min={f.min}
                         max={f.max}
