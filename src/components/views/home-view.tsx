@@ -53,7 +53,6 @@ export function HomeView({ onNavigate }: HomeViewProps) {
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-md border border-white/15">
-              <span className="flex size-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>{TODAY_SCHEDULE.dayCount} 진행 중</span>
               <span className="text-white/40">|</span>
               <span className="text-indigo-200">정상 출석 완료 (08:52:14)</span>

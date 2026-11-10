@@ -8,6 +8,7 @@ import { ZepIcon } from "@/components/icons/zep-icon";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/components/live/session";
+import { TODAY_SCHEDULE } from "@/lib/lms-data";
 import { NavTabId } from "./app-sidebar";
 
 interface HeaderProps {
@@ -58,63 +59,59 @@ const TAB_TITLES: Record<NavTabId, { title: string; subtitle: string }> = {
 
 export function AppHeader({ currentTab, onOpenMobileMenu }: HeaderProps) {
   const current = TAB_TITLES[currentTab];
-  const { cohort, user, notify } = useSession();
+  const { cohort, user } = useSession();
+
+  const zepUrl = cohort?.classroomUrl || TODAY_SCHEDULE.zepUrl || "https://zep.us/@lgam06";
+  const detectUrl = TODAY_SCHEDULE.detectUrl || "https://lms.wsts.kr/detection/student?classId=114";
 
   return (
-    // Non-sticky header: DOES NOT follow when scrolling
-    <header className="w-full border-b bg-background px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+    // Non-sticky header: DOES NOT follow when scrolling, fully responsive
+    <header className="w-full border-b bg-background px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4 min-w-0">
       {/* Left: Mobile Toggle & Page Title */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
         <Button
           variant="outline"
           size="icon-sm"
-          className="md:hidden"
+          className="md:hidden shrink-0"
           onClick={onOpenMobileMenu}
           aria-label="메뉴 열기"
         >
           <Menu className="size-4" />
         </Button>
 
-        <div>
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-            {current.title}
+        <div className="min-w-0">
+          <h1 className="text-sm sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-1.5 sm:gap-2 truncate">
+            <span>{current.title}</span>
             {currentTab === "ai-review" && (
               <Badge
                 variant="default"
-                className="text-[10px] bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-extrabold tracking-wider px-2 py-0.5 rounded-full uppercase border-none shadow-xs"
+                className="text-[10px] bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-extrabold tracking-wider px-2 py-0.5 rounded-full uppercase border-none shadow-xs shrink-0"
               >
                 BETA
               </Badge>
             )}
           </h1>
-          <p className="text-xs text-muted-foreground hidden sm:block">
+          <p className="text-xs text-muted-foreground hidden lg:block truncate">
             {current.subtitle}
           </p>
         </div>
       </div>
 
-      {/* Right: Quick Action Buttons (High-Quality ZEP & Seat Departure Detection) */}
-      <div className="flex items-center gap-2.5">
+      {/* Right: Quick Action Buttons (Prevent awkward wrap on narrow widths) */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 flex-nowrap">
         {user.role === "ADMIN" && (
           <Link
             href="/admin"
-            className="rounded-lg border border-border bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground whitespace-nowrap"
+            className="rounded-lg border border-border bg-primary px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold text-primary-foreground whitespace-nowrap shrink-0 shadow-2xs hover:bg-primary/90 transition-colors"
           >
             관리자 모드 ↗
           </Link>
         )}
+
         {/* High-End Official ZEP Button */}
         <button
-          onClick={() =>
-            cohort?.classroomUrl
-              ? window.open(
-                  cohort.classroomUrl,
-                  "_blank",
-                  "noopener,noreferrer",
-                )
-              : notify("기수에 등록된 강의실 주소가 없습니다.", true)
-          }
-          className="group relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-[#6758FF] via-[#5c4cff] to-[#4e3dff] hover:from-[#5747ee] hover:to-[#4332ee] shadow-sm shadow-[#6758FF]/30 hover:shadow-md hover:shadow-[#6758FF]/40 border border-white/20 active:scale-[0.98] transition-all cursor-pointer"
+          onClick={() => window.open(zepUrl, "_blank", "noopener,noreferrer")}
+          className="group relative inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-[#6758FF] via-[#5c4cff] to-[#4e3dff] hover:from-[#5747ee] hover:to-[#4332ee] shadow-xs border border-white/20 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap shrink-0"
         >
           <div className="flex size-4 items-center justify-center rounded bg-white/20 p-0.5 text-white group-hover:scale-110 transition-transform">
             <ZepIcon className="size-full fill-white" />
@@ -127,17 +124,12 @@ export function AppHeader({ currentTab, onOpenMobileMenu }: HeaderProps) {
         <Button
           variant="outline"
           size="sm"
-          className="gap-1.5 text-xs h-8 font-semibold border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-          onClick={() =>
-            notify(
-              "자리이탈감지 서비스는 백엔드에 연결되어 있지 않습니다.",
-              true,
-            )
-          }
+          className="gap-1 sm:gap-1.5 text-xs h-8 font-semibold border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 whitespace-nowrap shrink-0 px-2 sm:px-3"
+          onClick={() => window.open(detectUrl, "_blank", "noopener,noreferrer")}
         >
-          <ShieldAlert className="size-3.5 text-amber-500" />
+          <ShieldAlert className="size-3.5 text-amber-500 shrink-0" />
           <span>자리이탈감지</span>
-          <ExternalLink className="size-3 opacity-60 ml-0.5" />
+          <ExternalLink className="size-3 opacity-60 ml-0.5 hidden sm:inline" />
         </Button>
       </div>
     </header>

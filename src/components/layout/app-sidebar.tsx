@@ -7,7 +7,6 @@ import {
   CalendarDays,
   ChevronRight,
   FileCheck2,
-  GraduationCap,
   HelpCircle,
   LayoutDashboard,
   LucideIcon,
@@ -135,11 +134,11 @@ export function AppSidebar({
 
   return (
     <aside className="w-64 shrink-0 border-r bg-card/60 backdrop-blur-xl flex flex-col justify-between h-screen sticky top-0 z-30 select-none">
-      {/* Top Branding */}
+      {/* Top Branding (Click to navigate Home) */}
       <div>
-                <div className="p-5 flex items-center justify-between border-b bg-card/40">
+        <div className="p-5 flex items-center justify-between border-b bg-card/40">
           <Logo
-            size={40}
+            size={36}
             subtitle="LG CNS AM 캠프 6기"
             onClick={() => onTabChange("home")}
           />

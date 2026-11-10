@@ -21,6 +21,24 @@ npm run dev
 
 브라우저에서 [http://localhost:3000](http://localhost:3000)으로 접속하면 동작하는 대시보드를 확인할 수 있습니다.
 
+### 발표용 관리자 바로 로그인
+
+로그인 화면의 **관리자 바로 로그인** 버튼은 입력 없이 실제 관리자 계정으로 로그인한 뒤 `/admin`으로 이동합니다. 일반 로그인도 그대로 사용할 수 있습니다.
+
+`.env.local`에 아래 설정을 추가하고 개발 서버를 다시 실행하세요. 계정은 연결한 백엔드에 존재하는 활성 ADMIN이어야 합니다. 로컬 백엔드의 `BOOTSTRAP_ADMIN_EMAIL`·`BOOTSTRAP_ADMIN_PASSWORD`로 생성한 계정을 사용할 수 있습니다.
+
+```dotenv
+NEXT_PUBLIC_DATA_MODE=api
+BACKEND_URL=http://127.0.0.1:8080
+DEMO_ADMIN_LOGIN_ENABLED=true
+DEMO_ADMIN_EMAIL=관리자_이메일
+DEMO_ADMIN_PASSWORD=관리자_비밀번호
+```
+
+계정 값은 Next.js 서버에서만 읽고 백엔드의 기존 로그인 API로 인증합니다. 토큰은 일반 로그인과 같은 HttpOnly 쿠키로 저장합니다. `NEXT_PUBLIC_` 접두사를 계정 변수에 붙이지 마세요. 설정이 없거나 비활성화되어 있으면 버튼이 표시되지 않습니다. 이 설정을 켠 서버에서는 접속자가 누구나 해당 관리자 계정으로 로그인할 수 있으므로 로컬 발표 환경에서만 사용하세요. `.env.local`은 Git에 포함하지 않습니다.
+
+검증: `node scripts/verify-demo-admin-login.mjs`
+
 ### 2. 프로덕션 빌드
 ```bash
 npm run build

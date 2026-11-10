@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { useSession } from "./session";
 import { State, Files, useResource, useMutation, fieldClass } from "./shared";
+import { LectureArchive, AssessmentReview } from "./lecture-views";
 import { labels, today } from "@/lib/admin-model";
 type Post = {
   id: number;
@@ -73,7 +74,9 @@ type Attendance = {
   unitType: string;
   sessionNo: number;
   status: string;
-  version: number;
+  version?: number;
+  availableRequestedStatuses?: string[];
+  latestCorrection?: Correction | null;
 };
 type Correction = {
   id: number;
@@ -643,7 +646,7 @@ export function LiveAssignments() {
               disabled={
                 busy ||
                 selected?.submissionLocked ||
-                (!repo.trim() && !memo.trim()) ||
+                (!repo.trim() && !deploy.trim() && !memo.trim() && !file) ||
                 (!!file && file.size > 50 * 1024 * 1024)
               }
             >
@@ -657,26 +660,24 @@ export function LiveAssignments() {
 }
 export function LiveSchedule() {
   const { cohort } = useSession();
+  const [replayDate, setReplayDate] = useState(today());
   const [month, setMonth] = useState(today().slice(0, 7)),
     [target, setTarget] = useState<Attendance | null>(null),
     [reason, setReason] = useState(""),
     [requested, setRequested] = useState("PRESENT");
-  const events = useResource<Event[]>(
-      `/api/cohorts/${cohort!.id}/events?month=${month}`,
-      true,
-    ),
-    attendance = useResource<Attendance[]>(
-      `/api/cohorts/${cohort!.id}/attendance?month=${month}`,
-      true,
-    ),
-    corrections = useResource<Correction[]>(
-      `/api/cohorts/${cohort!.id}/attendance/corrections`,
-      true,
-    );
+  const calendar = useResource<{ events: Event[]; attendance: Attendance[] }>(
+    `/api/cohorts/${cohort!.id}/attendance/calendar?month=${month}`,
+  );
+  const events = { ...calendar, data: calendar.data?.events };
+  const attendance = { ...calendar, data: calendar.data?.attendance };
+  const corrections = { ...calendar, data: calendar.data?.attendance.flatMap(a => a.latestCorrection ? [{ ...a.latestCorrection, attendanceId: a.id }] : []) };
   const { busy, run } = useMutation();
   const [year, m] = month.split("-").map(Number);
   const count = new Date(year, m, 0).getDate(),
     offset = new Date(year, m - 1, 1).getDay();
+  const replayDates = useResource<{ dates: { date: string; videoCount: number }[] }>(
+    `/api/cohorts/${cohort!.id}/lecture-replays/dates?from=${month}-01&to=${month}-${count}`,
+  );
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -735,6 +736,7 @@ export function LiveSchedule() {
                           {e.title}
                         </div>
                       ))}
+                    {replayDates.data?.dates.some(entry => entry.date === day) && <button className="mt-2 block text-indigo-500 underline" onClick={() => setReplayDate(day)}>강의 다시보기</button>}
                     {attendance.data
                       ?.filter((a) => a.attendanceDate === day)
                       .map((a) => (
@@ -745,7 +747,7 @@ export function LiveSchedule() {
                               ? "일자"
                               : a.sessionNo + "회차"}
                           </Badge>
-                          {a.status !== "PRESENT" && (
+                          {(a.availableRequestedStatuses?.length ?? (a.status !== "PRESENT" ? 1 : 0)) > 0 && (
                             <button
                               className="block text-indigo-500 underline"
                               disabled={corrections.data?.some(
@@ -855,12 +857,13 @@ export function LiveSchedule() {
           </form>
         </DialogContent>
       </Dialog>
-      <LiveVideos />
+      {replayDates.error && <State {...replayDates} retry={replayDates.reload} />}
+      <LectureArchive key={`${cohort!.id}:${replayDate}`} initialDate={replayDate} />
     </div>
   );
 }
 export function LiveVideos() {
-  return <UnavailableFeature title="강의 다시보기" />;
+  return <LectureArchive />;
 }
 function UnavailableFeature({ title }: { title: string }) {
   return (
@@ -998,6 +1001,7 @@ export function LiveAssessments() {
               <Button disabled={busy} onClick={() => open(x)}>
                 응시 / 내역 확인
               </Button>
+              {x.status !== "DRAFT" && <AssessmentReview assessmentId={x.id} />}
             </CardContent>
           </Card>
         ))

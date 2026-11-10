@@ -23,6 +23,10 @@ try {
     assert.equal(result, expected);
     assert.deepEqual(calls, post === null ? [['/api/posts/12/discord-delivery', 'POST'], ['/api/posts/12/discord-delivery', 'GET']] : [['/api/posts/12/discord-delivery', 'POST']]);
   }
+  const rejected = Object.assign(Error("디스코드 전송 설정이 없습니다."), { code: "DISCORD_NOT_CONFIGURED" });
+  let attempts = 0;
+  await assert.rejects(() => sendDiscord(async () => { attempts++; throw rejected; }, 12), error => error === rejected);
+  assert.equal(attempts, 1, "known configuration failure must not be hidden behind a result lookup");
   for (const name of ['api-client', 'backend-capabilities', 'admin-api']) {
     const source = await readFile(`src/lib/${name}.ts`, 'utf8');
     const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } }).outputText

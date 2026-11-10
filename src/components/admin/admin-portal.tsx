@@ -191,6 +191,7 @@ export default function AdminPortal() {
       "cohorts",
       "enrollments",
       "assignments",
+      "videos",
       "assessments",
       "corrections",
     ];
@@ -272,8 +273,7 @@ export default function AdminPortal() {
             (key) =>
               !(
                 r === "posts" && ["visibility"].includes(key)
-              ) &&
-              !(r === "questions" && ["topicId", "chapterId"].includes(key)),
+              ),
           ),
         }
       : configs[r];
@@ -343,10 +343,10 @@ export default function AdminPortal() {
       )
     )
       return time(v);
-    if (key === "topicId") return topicPath(v);
+    if (key === "topicId") return mode === "api" && v ? `핵심 개념 #${v}` : topicPath(v);
     if (key === "chapterId")
       return v
-        ? store.chapters.find((x) => x.id === v)?.title || "챕터 없음"
+        ? store.chapters.find((x) => x.id === v)?.title || (mode === "api" ? `챕터 #${v}` : "챕터 없음")
         : "연결된 복습 영상 없음";
     if (key === "pinned") return v ? "상단 고정" : "—";
     if (key === "score") return v ?? "미채점";
@@ -724,7 +724,17 @@ export default function AdminPortal() {
       deliveryLocks.current.add(key);
       setDeliveryOverrides(current => ({ ...current, [key]: "PENDING" }));
       await run(async () => {
-        const status = await sendDiscord(api.request, row.id);
+        let status: DeliveryStatus;
+        try {
+          status = await sendDiscord(api.request, row.id);
+        } catch (error) {
+          setDeliveryOverrides(current => {
+            const next = { ...current };
+            delete next[key];
+            return next;
+          });
+          throw error;
+        }
         setDeliveryOverrides(current => ({ ...current, [key]: status }));
         try { await refresh(); } catch {
           notify("목록을 갱신하지 못했습니다. 전송 결과를 확인해 주세요.", true);
@@ -866,7 +876,7 @@ export default function AdminPortal() {
                 )}
               </>
             )}
-            {r === "videos" && (
+            {r === "videos" && mode === "mock" && (
               <button
                 onClick={() => navigate("chapters", row.id, String(row.title))}
               >
@@ -940,10 +950,9 @@ export default function AdminPortal() {
     if (editor.resource === "questions") {
       const count = Math.max(2, Math.min(10, Number(draft.optionCount) || 4));
       return configs.questions.fields
-        .filter(
-          (field) =>
-            mode === "mock" || !["topicId", "chapterId"].includes(field.key),
-        )
+        .map(field => mode === "api" && ["topicId", "chapterId"].includes(field.key)
+          ? { ...field, ref: undefined, type: "number" as const, min: 1, label: field.label + " ID (선택)" }
+          : field)
         .flatMap((field) =>
           /^option[0-9]+$/.test(field.key)
             ? field.key === "option1"
@@ -1155,9 +1164,9 @@ export default function AdminPortal() {
                 <div>
                   <p>{s.title}</p>
                   <strong>
-                    {mode === "api" && s.icon === Video ? "미제공" : s.value}
+                    {s.value}
                     <small>
-                      {mode === "api" && s.icon === Video ? "" : s.unit}
+                      {s.unit}
                     </small>
                   </strong>
                   <span>{s.detail}</span>
