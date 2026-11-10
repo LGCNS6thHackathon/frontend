@@ -153,17 +153,17 @@ export default function LmsPortalPage() {
 
         <main className="flex-1 container mx-auto px-4 py-6 sm:px-8 max-w-7xl animate-in fade-in-50 duration-200">
           {currentTab === "home" && <HomeView onNavigate={handleTabChange} />}
-          {currentTab === "schedule" && <ScheduleView onNavigate={handleTabChange} />}
+          {currentTab === "schedule" && <ScheduleView onNavigate={tab => handleTabChange(tab as NavTabId)} />}
           {currentTab === "notices" && <NoticesView />}
           {currentTab === "qa" && <QaView />}
           {currentTab === "evaluation" && (
             <EvaluationView
-              onNavigate={handleTabChange}
+              onNavigate={tab => handleTabChange(tab as NavTabId)}
               resetSignal={evalResetKey}
             />
           )}
           {currentTab === "assignment" && <AssignmentView />}
-          {currentTab === "ai-review" && <AiReviewView onNavigate={handleTabChange} />}
+          {currentTab === "ai-review" && <AiReviewView />}
           {currentTab === "mypage" && <MyPageView />}
         </main>
 
