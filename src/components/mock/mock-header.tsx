@@ -96,7 +96,7 @@ export function AppHeader({ currentTab, onOpenMobileMenu }: HeaderProps) {
       <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 flex-nowrap">
         <Link
           href="/admin"
-          className="rounded-lg border border-border bg-primary px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold text-primary-foreground whitespace-nowrap shrink-0 shadow-2xs hover:bg-primary/90 transition-colors"
+          className="hidden md:inline-flex rounded-lg border border-border bg-primary px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold text-primary-foreground whitespace-nowrap shrink-0 shadow-2xs hover:bg-primary/90 transition-colors"
         >
           관리자 모드 ↗
         </Link>

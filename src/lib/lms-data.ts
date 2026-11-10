@@ -83,6 +83,23 @@ export interface EvaluationItem {
   feedback: string;
 }
 
+export interface VideoTimelineChapter {
+  timeStr: string;
+  title: string;
+  isExamPoint?: boolean;
+}
+
+export interface LectureVideoClip {
+  lectureDay: string;
+  lectureTitle: string;
+  instructor: string;
+  duration: string;
+  clipStartTime: string;
+  clipEndTime: string;
+  instructorQuote: string;
+  chapters: VideoTimelineChapter[];
+}
+
 export interface EvaluationQuestion {
   id: number;
   examId: number;
@@ -96,6 +113,7 @@ export interface EvaluationQuestion {
   userAnswerIndex?: number;
   explanation: string;
   relatedAiTopic?: string;
+  videoClip?: LectureVideoClip;
 }
 
 export interface EvaluationMeta {
@@ -503,6 +521,20 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
     correctIndex: 0,
     explanation: "가상 스레드는 JVM 사용자 영역에서 관리되는 경량 스레드로, 소수의 OS 캐리어 스레드(Carrier Thread) 위에서 M:N 다중화(Multiplexing) 방식으로 동작합니다.",
     relatedAiTopic: "Java 21 가상 스레드 대규모 동시성",
+    videoClip: {
+      lectureDay: "Day 65 (10월 27일)",
+      lectureTitle: "Java 21 가상 스레드 대규모 동시성과 스프링 부트 3 최적화",
+      instructor: "김민수 강사",
+      duration: "2시간 35분",
+      clipStartTime: "24:15",
+      clipEndTime: "28:40",
+      instructorQuote: "가상 스레드는 커널 스레드 1:1 매핑이 아니라 경량 스레드로 M:N 스케줄링됩니다. 시험에서 플랫폼 스레드와의 구조적 차이를 꼭 기억하세요!",
+      chapters: [
+        { timeStr: "24:15", title: "가상 스레드 탄생 배경과 M:N 매핑 구조" },
+        { timeStr: "25:50", title: "블로킹 I/O 시 캐리어 스레드 Unmount 원리", isExamPoint: true },
+        { timeStr: "27:10", title: "synchronized 블록 핀닝(Pinning) 주의사항" },
+      ],
+    },
   },
   {
     id: 2,
@@ -520,6 +552,20 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
     correctIndex: 1,
     explanation: "코레오그래피 Saga 패턴은 중앙 조율자 없이 각 서비스가 Pub/Sub 이벤트를 통해 느슨하게 결합되어 비동기적으로 트랜잭션과 보상 로직을 수행합니다.",
     relatedAiTopic: "Event-Driven MSA 아키텍처와 Kafka Saga 패턴",
+    videoClip: {
+      lectureDay: "Day 66 (10월 28일)",
+      lectureTitle: "Event-Driven MSA 아키텍처와 분산 트랜잭션 (Saga 패턴)",
+      instructor: "김민수 강사",
+      duration: "2시간 40분",
+      clipStartTime: "34:12",
+      clipEndTime: "38:50",
+      instructorQuote: "코레오그래피 Saga 패턴은 중앙 조율자(Orchestrator) 없이 각 서비스가 이벤트를 발행/구독하여 자율적으로 로컬 트랜잭션을 실행합니다.",
+      chapters: [
+        { timeStr: "34:12", title: "왜 2PC 대신 Saga 패턴을 써야 하는가?" },
+        { timeStr: "36:05", title: "코레오그래피 vs 오케스트레이션 아키텍처 비교", isExamPoint: true },
+        { timeStr: "37:45", title: "보상 트랜잭션(Compensating Transaction) 롤백 시뮬레이션" },
+      ],
+    },
   },
   {
     id: 3,
@@ -550,6 +596,20 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
     correctIndex: 1,
     explanation: "Circuit Breaker 패턴은 다운스트림 서비스 장애 감지 시 회로를 OPEN하여 더 이상의 실패 요청 전송을 막고 사전 정의된 Fallback 응답을 반환하여 시스템 전체 회복 탄력성을 유지합니다.",
     relatedAiTopic: "Spring Cloud Gateway 라우팅 & 회복 탄력성",
+    videoClip: {
+      lectureDay: "Day 67 (10월 29일)",
+      lectureTitle: "Spring Cloud Gateway 라우팅 심화 & Resilience4j CircuitBreaker",
+      instructor: "박서준 멘토",
+      duration: "2시간 50분",
+      clipStartTime: "41:20",
+      clipEndTime: "45:30",
+      instructorQuote: "서킷 브레이커는 다운스트림 서비스 장애 시 회로를 열어(OPEN) 연쇄 장애(Cascading Failure)를 차단하고 Fallback을 반환합니다.",
+      chapters: [
+        { timeStr: "41:20", title: "GatewayFilter 체인과 라우팅 메커니즘" },
+        { timeStr: "43:10", title: "CircuitBreaker 3대 상태(CLOSED, OPEN, HALF-OPEN)", isExamPoint: true },
+        { timeStr: "44:30", title: "fallbackUri 포워딩 핸들러 구성 실습" },
+      ],
+    },
   },
   {
     id: 4,
@@ -580,6 +640,20 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
     correctIndex: 1,
     explanation: "자바스크립트 클로저(Closure)는 함수가 선언된 시점의 어휘적 환경(Lexical Scope)을 기억하므로, 의존성 배열에 최신 상태를 전달하지 않으면 과거의 렌더링 스냅샷 값만을 지속적으로 바라보게 됩니다.",
     relatedAiTopic: "React Hook 클로저와 의존성 배열 최적화",
+    videoClip: {
+      lectureDay: "Day 25 (9월 03일)",
+      lectureTitle: "React Hook 심화: useEffect 의존성 배열과 클로저 스냅샷",
+      instructor: "박서준 멘토",
+      duration: "2시간 30분",
+      clipStartTime: "48:10",
+      clipEndTime: "53:20",
+      instructorQuote: "의존성 배열을 비워두면 타이머나 핸들러는 초기 렌더링 시점의 값만을 기억하는 Stale Closure에 갇힙니다. 함수형 업데이트나 의존성 추가로 해결해야 합니다.",
+      chapters: [
+        { timeStr: "48:10", title: "함수형 컴포넌트 렌더링 스냅샷과 클로저" },
+        { timeStr: "50:15", title: "Stale Closure 재현 실습: 타이머 내부의 멈춘 State", isExamPoint: true },
+        { timeStr: "52:00", title: "setState 함수형 업데이트로 의존성 제거하기" },
+      ],
+    },
   },
   {
     id: 5,
@@ -597,6 +671,20 @@ try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
     correctIndex: 3,
     explanation: "SERIALIZABLE 격리 수준은 트랜잭션을 완전히 순차적으로 실행하여 Dirty Read, Non-Repeatable Read, Phantom Read 현상을 모두 완벽히 방지합니다. (참고: PostgreSQL의 REPEATABLE READ도 MVCC와 가상 락으로 팬텀 리드를 기본 차단함)",
     relatedAiTopic: "ACID 트랜잭션 격리 수준과 동시성 제어",
+    videoClip: {
+      lectureDay: "Day 42 (9월 24일)",
+      lectureTitle: "RDBMS ACID 트랜잭션 격리 수준과 동시성 제어 (MVCC)",
+      instructor: "김민수 강사",
+      duration: "2시간 30분",
+      clipStartTime: "55:10",
+      clipEndTime: "59:40",
+      instructorQuote: "팬텀 리드는 없던 행이 유령처럼 나타나는 현상입니다. SERIALIZABLE 수준이 완전한 직렬화를 통해 이를 방지하며, 실무에서는 인덱스 범위 락(Next-Key Lock)의 동작 원리를 이해해야 합니다.",
+      chapters: [
+        { timeStr: "55:10", title: "트랜잭션 3대 이상 현상 (Dirty, Non-Repeatable, Phantom Read)" },
+        { timeStr: "57:00", title: "4단계 트랜잭션 격리 수준 비교와 SERIALIZABLE", isExamPoint: true },
+        { timeStr: "58:30", title: "PostgreSQL/MySQL의 MVCC와 Gap Lock 차이점" },
+      ],
+    },
   },
   {
     id: 6,
@@ -651,6 +739,20 @@ console.log(greeting);`,
     correctIndex: 0,
     explanation: "멀티스테이지 빌드는 단일 Dockerfile 내에서 여러 개의 FROM 절을 사용하여, 컴파일/테스트 단계의 무거운 SDK를 버리고 빌드 결과물(jar, 정적 파일)만을 가벼운 JRE/알파인 런타임 이미지에 복사하여 배포 이미지를 경량화합니다.",
     relatedAiTopic: "Docker 컨테이너 경량화와 Multi-stage Build",
+    videoClip: {
+      lectureDay: "Day 52 (10월 10일)",
+      lectureTitle: "도커 컨테이너 경량화 최적화와 Multi-stage Build 실무",
+      instructor: "박서준 멘토",
+      duration: "2시간 40분",
+      clipStartTime: "32:00",
+      clipEndTime: "36:25",
+      instructorQuote: "Gradle 빌드 도구와 JDK는 500MB가 넘습니다. 멀티스테이지 빌드를 통해 컴파일 산출물 jar만 JRE 알파인 이미지로 복사하면 50MB대로 줄일 수 있습니다.",
+      chapters: [
+        { timeStr: "32:00", title: "단일 스테이지 Dockerfile의 비대화 문제" },
+        { timeStr: "33:45", title: "Multi-stage Build: AS builder와 COPY --from 구문", isExamPoint: true },
+        { timeStr: "35:10", title: "Distroless vs Alpine 경량 베이스 이미지 선택 전략" },
+      ],
+    },
   },
   {
     id: 9,
@@ -668,6 +770,20 @@ console.log(greeting);`,
     correctIndex: 1,
     explanation: "카프카는 토픽 전체가 아닌 '개별 파티션 단위'로 메시지의 엄격한 순서(In-order)를 보장합니다. 따라서 동일한 비즈니스 엔티티(예: 주문ID)는 동일 파티션 키로 발행해야 순차 처리가 보장됩니다.",
     relatedAiTopic: "Kafka 토픽 파티셔닝과 순서 보장 아키텍처",
+    videoClip: {
+      lectureDay: "Day 68 (10월 30일)",
+      lectureTitle: "Apache Kafka 파티셔닝 구조와 메시지 순서 보장 전략",
+      instructor: "김민수 강사",
+      duration: "2시간 45분",
+      clipStartTime: "28:15",
+      clipEndTime: "32:50",
+      instructorQuote: "카프카의 핵심은 '파티션 내 순서 보장'입니다. 전체 토픽이 아니라 동일 파티션 키로 해싱되어 같은 파티션에 인입된 메시지만 순서가 보장됩니다.",
+      chapters: [
+        { timeStr: "28:15", title: "카프카 브로커, 토픽, 파티션 아키텍처" },
+        { timeStr: "30:00", title: "파티션 키 해싱과 파티션 내 순서(In-order) 보장 원리", isExamPoint: true },
+        { timeStr: "31:40", title: "파티션 리밸런싱과 순서 왜곡 방지 주의점" },
+      ],
+    },
   },
   {
     id: 10,
@@ -685,6 +801,20 @@ console.log(greeting);`,
     correctIndex: 1,
     explanation: "Transactional Outbox 패턴은 비즈니스 데이터 수정과 발행할 메시지를 하나의 RDBMS 로컬 트랜잭션으로 OUTBOX 테이블에 함께 저장한 뒤, Debezium(CDC)이나 별도 폴러가 카프카로 안전하게 발행하여 분실을 방지합니다.",
     relatedAiTopic: "Transactional Outbox 패턴과 데이터 정합성",
+    videoClip: {
+      lectureDay: "Day 69 (11월 02일)",
+      lectureTitle: "분산 시스템 데이터 정합성과 Transactional Outbox 패턴",
+      instructor: "박서준 멘토",
+      duration: "2시간 35분",
+      clipStartTime: "19:40",
+      clipEndTime: "24:30",
+      instructorQuote: "DB 커밋과 카프카 전송을 분리하면 네트워크 실패 시 이중 전송이나 유실이 발생합니다. OUTBOX 테이블에 함께 INSERT하고 Debezium CDC로 발행하는 것이 정석입니다.",
+      chapters: [
+        { timeStr: "19:40", title: "듀얼 라이트(Dual Write) 문제와 분산 트랜잭션의 한계" },
+        { timeStr: "21:20", title: "Transactional Outbox 패턴의 구조와 RDBMS 원자성", isExamPoint: true },
+        { timeStr: "23:15", title: "Debezium CDC 기반 카프카 커넥터 연동 파이프라인" },
+      ],
+    },
   },
   {
     id: 11,
@@ -794,6 +924,20 @@ export const PAST_EXAM_FEEDBACK_QUESTIONS: EvaluationQuestion[] = [
     userAnswerIndex: 0, // 오답 선택: <span> 선택
     explanation: "<div> 요소는 블록 레벨 태그로 문자열이나 자식 콘텐츠의 길이와 상관없이 한 개의 온전한 가로 블록을 생성합니다.",
     relatedAiTopic: "HTML 블록 요소 vs 인라인 요소 구조",
+    videoClip: {
+      lectureDay: "Day 08 (8월 12일)",
+      lectureTitle: "웹 표준 HTML5 시맨틱 마크업 & CSS 디스플레이 박스 모델",
+      instructor: "김민수 강사",
+      duration: "2시간 20분",
+      clipStartTime: "18:30",
+      clipEndTime: "22:45",
+      instructorQuote: "div와 span의 본질적인 차이는 브라우저 렌더링 엔진의 Box Model에서 block 가로 전폭을 점유하느냐 inline 흐름을 따르느냐입니다. 시험 단골 문제입니다!",
+      chapters: [
+        { timeStr: "18:30", title: "HTML 블록 요소 vs 인라인 요소 박스 모델" },
+        { timeStr: "20:15", title: "div 요소의 100% 가로 점유 특성과 줄바꿈 메커니즘", isExamPoint: true },
+        { timeStr: "21:50", title: "span 태그와 CSS display: inline-block 변환" },
+      ],
+    },
   },
   {
     id: 102,
@@ -812,6 +956,20 @@ export const PAST_EXAM_FEEDBACK_QUESTIONS: EvaluationQuestion[] = [
     userAnswerIndex: 2, // 오답 선택: ID 선택자 선택
     explanation: "특이성 가중치는 인라인 스타일(1000) > ID(100) > 클래스(10) > 요소(1) 순으로 계산됩니다.",
     relatedAiTopic: "CSS 특이성 점수 계산법",
+    videoClip: {
+      lectureDay: "Day 10 (8월 14일)",
+      lectureTitle: "CSS 캐스케이딩(Cascade) 원리와 특이성(Specificity) 계산법",
+      instructor: "김민수 강사",
+      duration: "2시간 15분",
+      clipStartTime: "31:40",
+      clipEndTime: "36:10",
+      instructorQuote: "인라인 스타일(1000점)은 ID 선택자(100점)나 클래스(10점)보다 압도적으로 우선합니다. !important 남용을 막으려면 이 가중치 체계를 완벽히 숙지해야 합니다.",
+      chapters: [
+        { timeStr: "31:40", title: "CSS Cascading 3대 원칙 (중요도, 명시도, 선언 순서)" },
+        { timeStr: "33:20", title: "특이성 4자리 점수 체계 (인라인 > ID > 클래스 > 태그)", isExamPoint: true },
+        { timeStr: "35:05", title: "!important 규칙과 안티패턴 방지 가이드" },
+      ],
+    },
   },
   {
     id: 103,
@@ -832,6 +990,20 @@ var x = 5;`,
     userAnswerIndex: 2, // 오답 선택: ReferenceError 선택
     explanation: "var 키워드 변수는 호이스팅되어 선언부가 스코프 최상단으로 끌어올려지며 undefined로 기본 초기화됩니다. 실제 할당은 2번째 줄에서 일어납니다.",
     relatedAiTopic: "JavaScript 변수 호이스팅과 TDZ(Temporal Dead Zone)",
+    videoClip: {
+      lectureDay: "Day 14 (8월 20일)",
+      lectureTitle: "JavaScript 실행 컨텍스트(Execution Context)와 변수 호이스팅",
+      instructor: "김민수 강사",
+      duration: "2시간 45분",
+      clipStartTime: "15:20",
+      clipEndTime: "19:50",
+      instructorQuote: "var 선언은 생성 단계(Creation Phase)에서 undefined로 메모리에 등록됩니다. 반면 let/const는 TDZ(Temporal Dead Zone)로 보호되어 ReferenceError가 발생하죠.",
+      chapters: [
+        { timeStr: "15:20", title: "자바스크립트 엔진 2단계: 생성 단계 vs 실행 단계" },
+        { timeStr: "17:05", title: "var 호이스팅과 undefined 초기화의 함정", isExamPoint: true },
+        { timeStr: "18:40", title: "let/const의 TDZ(Temporal Dead Zone) 비교" },
+      ],
+    },
   },
   {
     id: 104,
@@ -850,6 +1022,20 @@ var x = 5;`,
     userAnswerIndex: 0, // 오답 선택: 무한 루프 선택
     explanation: "의존성 배열을 누락하면 컴포넌트가 재렌더링되더라도 이펙트 함수 내부의 클로저가 이전 마운트 당시의 상태값 스냅샷에 고정되는 Stale Closure 문제가 발생합니다.",
     relatedAiTopic: "React useEffect 클로저 함정과 최신 상태 동기화",
+    videoClip: {
+      lectureDay: "Day 25 (9월 03일)",
+      lectureTitle: "React Hook 심화: useEffect 의존성 배열과 클로저 스냅샷",
+      instructor: "박서준 멘토",
+      duration: "2시간 30분",
+      clipStartTime: "48:10",
+      clipEndTime: "53:20",
+      instructorQuote: "의존성 배열을 비워두면 타이머나 핸들러는 초기 렌더링 시점의 값만을 기억하는 Stale Closure에 갇힙니다. 함수형 업데이트나 의존성 추가로 해결해야 합니다.",
+      chapters: [
+        { timeStr: "48:10", title: "함수형 컴포넌트 렌더링 스냅샷과 클로저" },
+        { timeStr: "50:15", title: "Stale Closure 재현 실습: 타이머 내부의 멈춘 State", isExamPoint: true },
+        { timeStr: "52:00", title: "setState 함수형 업데이트로 의존성 제거하기" },
+      ],
+    },
   },
   {
     id: 105,

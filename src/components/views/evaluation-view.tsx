@@ -8,15 +8,24 @@ import {
   Award,
   BarChart3,
   Bookmark,
+  Calendar,
   CheckCircle2,
   Clock,
   Filter,
   List,
+  Maximize2,
+  Pause,
   Play,
   Printer,
+  Quote,
   Send,
+  SkipBack,
+  SkipForward,
   Sparkles,
   TrendingUp,
+  Video,
+  Volume2,
+  VolumeX,
   XCircle,
 } from "lucide-react";
 
@@ -46,6 +55,7 @@ import {
   INITIAL_EVALUATIONS,
   INITIAL_EXAM_QUESTIONS,
   PAST_EXAM_FEEDBACK_QUESTIONS,
+  VideoTimelineChapter,
   WSTS_EVALUATIONS,
 } from "@/lib/lms-data";
 
@@ -75,6 +85,15 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
   const [examFinalScore, setExamFinalScore] = React.useState<number | null>(null);
   const [correctCount, setCorrectCount] = React.useState<number>(0);
   const [isResultModalOpen, setIsResultModalOpen] = React.useState<boolean>(false);
+
+  // Lecture Video Player Modal State (오답노트 영상 & 타임라인 연동)
+  const [activeVideoModal, setActiveVideoModal] = React.useState<{
+    question: EvaluationQuestion;
+    selectedChapter?: VideoTimelineChapter;
+  } | null>(null);
+  const [isVideoPlaying, setIsVideoPlaying] = React.useState<boolean>(true);
+  const [videoPlaybackRate, setVideoPlaybackRate] = React.useState<number>(1.0);
+  const [isAudioMuted, setIsAudioMuted] = React.useState<boolean>(false);
 
   // Report Round Switcher State
   const [activeReportRound, setActiveReportRound] = React.useState<number>(1);
@@ -1099,6 +1118,204 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
                       </p>
                     </div>
 
+                    {/* High-Fidelity Lecture Video Clip & Interactive Timeline Section */}
+                    {q.videoClip && (
+                      <div className="rounded-xl border border-indigo-200/90 dark:border-indigo-900/70 bg-gradient-to-br from-indigo-50/60 via-background to-purple-50/40 dark:from-indigo-950/30 dark:via-background dark:to-purple-950/25 p-4 sm:p-5 space-y-3.5 shadow-2xs">
+                        {/* Header with Lecture Meta */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-border/60">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10.5px] px-2.5 py-0.5 gap-1.5 shadow-2xs">
+                              <Video className="size-3" />
+                              강의 영상 출제 포인트
+                            </Badge>
+                            <span className="text-xs font-bold text-foreground">
+                              {q.videoClip.lectureDay} • {q.videoClip.instructor}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground font-mono bg-muted/60 px-1.5 py-0.5 rounded">
+                              클립 {q.videoClip.clipStartTime} ~ {q.videoClip.clipEndTime}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground font-medium truncate max-w-sm sm:text-right" title={q.videoClip.lectureTitle}>
+                            {q.videoClip.lectureTitle}
+                          </span>
+                        </div>
+
+                        {/* Video Thumbnail (Left) & Timeline Chapters (Right) */}
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
+                          {/* Left: 16:9 Video Player Card Preview */}
+                          <div
+                            onClick={() => {
+                              setActiveVideoModal({
+                                question: q,
+                                selectedChapter: q.videoClip?.chapters.find((c) => c.isExamPoint) || q.videoClip?.chapters[0],
+                              });
+                              setIsVideoPlaying(true);
+                            }}
+                            className="md:col-span-5 group relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-950 shadow-md cursor-pointer aspect-video flex flex-col justify-between p-3 select-none transition-all hover:ring-2 hover:ring-indigo-500/70"
+                          >
+                            {/* Visual backdrop styling */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/70 pointer-events-none" />
+                            <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:14px_14px] pointer-events-none" />
+
+                            {/* Top info badge */}
+                            <div className="relative z-10 flex items-center justify-between gap-2 text-white">
+                              <span className="px-2 py-0.5 rounded bg-rose-600/90 text-[10px] font-bold uppercase tracking-wider font-mono flex items-center gap-1 shadow-xs">
+                                <span className="size-1.5 rounded-full bg-white animate-pulse" />
+                                출제 핵심 구간
+                              </span>
+                              <span className="text-[10px] font-mono text-zinc-300 font-semibold bg-black/60 px-2 py-0.5 rounded backdrop-blur-xs">
+                                {q.videoClip.clipStartTime} ~ {q.videoClip.clipEndTime}
+                              </span>
+                            </div>
+
+                            {/* Center: Glowing Play Button */}
+                            <div className="relative z-10 self-center flex flex-col items-center gap-1.5 text-center my-auto">
+                              <div className="size-11 sm:size-12 rounded-full bg-indigo-600 group-hover:bg-indigo-500 text-white flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform ring-4 ring-white/10">
+                                <Play className="size-5 ml-0.5 fill-white" />
+                              </div>
+                              <span className="text-[11px] font-bold text-white drop-shadow group-hover:text-indigo-200 transition-colors">
+                                출제 구간 영상 재생
+                              </span>
+                            </div>
+
+                            {/* Bottom bar */}
+                            <div className="relative z-10 text-white flex items-center justify-between text-[10.5px] border-t border-white/10 pt-1.5">
+                              <span className="text-zinc-300 truncate max-w-[150px]">
+                                {q.videoClip.instructor}
+                              </span>
+                              <div className="flex items-center gap-1 font-mono text-[9.5px] text-zinc-400">
+                                <span>총 {q.videoClip.duration}</span>
+                                <span>•</span>
+                                <span className="text-zinc-300 font-semibold">1080p FHD</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Interactive Timeline Chapters Track */}
+                          <div className="md:col-span-7 flex flex-col justify-between space-y-2.5">
+                            <div className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-foreground flex items-center gap-1.5 tracking-tight">
+                                  <Clock className="size-3.5 text-indigo-500" />
+                                  강의 타임라인 & 챕터별 출제 포인트
+                                </span>
+                                <span className="text-[10.5px] text-muted-foreground font-mono">
+                                  타임스탬프 클릭 시 해당 위치 재생
+                                </span>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                {q.videoClip.chapters.map((ch, chIdx) => (
+                                  <div
+                                    key={chIdx}
+                                    onClick={() => {
+                                      setActiveVideoModal({ question: q, selectedChapter: ch });
+                                      setIsVideoPlaying(true);
+                                    }}
+                                    className={`group/ch flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer text-xs ${
+                                      ch.isExamPoint
+                                        ? "border-amber-400/80 bg-amber-50/80 dark:bg-amber-950/30 hover:bg-amber-100/80 dark:hover:bg-amber-950/50 shadow-2xs"
+                                        : "border-border/60 bg-card hover:bg-muted/70 hover:border-border"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <span
+                                        className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] transition-colors shrink-0 flex items-center gap-1 ${
+                                          ch.isExamPoint
+                                            ? "bg-amber-500 text-white"
+                                            : "bg-muted text-foreground group-hover/ch:bg-indigo-600 group-hover/ch:text-white"
+                                        }`}
+                                      >
+                                        <Play className="size-2.5 fill-current opacity-80" />
+                                        {ch.timeStr}
+                                      </span>
+                                      <span className="font-semibold text-foreground tracking-[-0.01em] truncate text-[12px] sm:text-[12.5px]">
+                                        {ch.title}
+                                      </span>
+                                    </div>
+
+                                    {ch.isExamPoint && (
+                                      <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] shrink-0 ml-2 py-0 h-5 shadow-2xs">
+                                        ★ 핵심 출제 포인트
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Instructor Quote Callout */}
+                            <div className="rounded-lg p-2.5 bg-muted/40 border border-border/60 flex items-start gap-2 text-xs">
+                              <Quote className="size-3.5 text-indigo-500 shrink-0 mt-0.5" />
+                              <p className="text-[11.5px] text-foreground/80 leading-relaxed tracking-[-0.01em] break-keep italic">
+                                <b className="font-semibold text-foreground not-italic">{q.videoClip.instructor}:</b> &ldquo;{q.videoClip.instructorQuote}&rdquo;
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quick CTA Actions */}
+                        <div className="pt-2 border-t border-border/50 flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              onClick={() => {
+                                setActiveVideoModal({
+                                  question: q,
+                                  selectedChapter: q.videoClip?.chapters[0],
+                                });
+                                setIsVideoPlaying(true);
+                              }}
+                              className="h-8 text-xs font-semibold gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-xs"
+                            >
+                              <Play className="size-3 fill-white" />
+                              이 구간 강의 시청하기 ({q.videoClip.clipStartTime}부터)
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                if (onNavigate) {
+                                  onNavigate("schedule");
+                                } else {
+                                  const url = new URL(window.location.href);
+                                  url.searchParams.set("tab", "schedule");
+                                  window.history.replaceState({}, "", url.toString());
+                                  window.dispatchEvent(new PopStateEvent("popstate"));
+                                }
+                              }}
+                              className="h-8 text-xs font-semibold gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground"
+                            >
+                              <Calendar className="size-3" />
+                              교육 캘린더 전체 다시보기
+                            </Button>
+                          </div>
+
+                          {q.relatedAiTopic && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                if (onNavigate) {
+                                  onNavigate("ai-review");
+                                } else {
+                                  const url = new URL(window.location.href);
+                                  url.searchParams.set("tab", "ai-review");
+                                  window.history.replaceState({}, "", url.toString());
+                                  window.dispatchEvent(new PopStateEvent("popstate"));
+                                }
+                              }}
+                              className="h-8 text-xs font-semibold gap-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer"
+                            >
+                              <Sparkles className="size-3 text-indigo-500" />
+                              연관 AI 복습 퀴즈 풀기 ↗
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* AI Review Deep-link CTA */}
                     {q.relatedAiTopic && (
                       <div className="pt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -1446,6 +1663,334 @@ export function EvaluationView({ onNavigate }: EvaluationViewProps) {
               오답노트 및 풀이 확인 🚀
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* DIALOG 4: LECTURE REPLAY & TIMELINE VIDEO PLAYER MODAL */}
+      {/* ========================================================================= */}
+      <Dialog
+        open={!!activeVideoModal}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveVideoModal(null);
+            setIsVideoPlaying(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-y-auto p-0 border-zinc-800 bg-zinc-950 text-zinc-100 shadow-2xl rounded-2xl">
+          {activeVideoModal && activeVideoModal.question.videoClip && (
+            <div className="flex flex-col">
+              {/* Top Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-zinc-800 bg-zinc-900/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge className="bg-indigo-600 text-white font-bold text-[10.5px] px-2 py-0.5">
+                      문제 #{activeVideoModal.question.id} 출제 연계
+                    </Badge>
+                    <Badge variant="outline" className="border-zinc-700 text-zinc-300 text-[10.5px]">
+                      {activeVideoModal.question.category}
+                    </Badge>
+                    <span className="text-xs font-mono text-zinc-400">
+                      {activeVideoModal.question.videoClip.lectureDay}
+                    </span>
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
+                    {activeVideoModal.question.videoClip.lectureTitle}
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                  <span className="text-xs font-mono text-zinc-400 bg-zinc-800 px-2.5 py-1 rounded-md">
+                    강사: <b className="text-zinc-200">{activeVideoModal.question.videoClip.instructor}</b>
+                  </span>
+                  <span className="text-xs font-mono text-indigo-400 bg-indigo-950/60 border border-indigo-800 px-2.5 py-1 rounded-md">
+                    총 {activeVideoModal.question.videoClip.duration}
+                  </span>
+                </div>
+              </div>
+
+              {/* Main Simulated Video Canvas (16:9 Aspect Ratio) */}
+              <div className="relative aspect-video w-full bg-black overflow-hidden flex flex-col justify-between p-4 sm:p-6 select-none border-b border-zinc-800">
+                {/* Visual subtle grid background */}
+                <div className="absolute inset-0 bg-gradient-to-b from-zinc-900/90 via-zinc-950/95 to-black pointer-events-none" />
+                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
+
+                {/* Video Watermark & Status */}
+                <div className="relative z-10 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 bg-black/60 px-3 py-1 rounded-md backdrop-blur-xs border border-white/10">
+                    <span className="size-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="font-semibold text-zinc-300 text-[11px] tracking-tight">
+                      LG CNS AM Inspire Camp 6기 정규 강의 다시보기
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 font-mono text-[10.5px] text-zinc-400 bg-black/60 px-2.5 py-1 rounded-md backdrop-blur-xs border border-white/10">
+                    <span className="text-emerald-400 font-bold">1080p FHD</span>
+                    <span>•</span>
+                    <span>{videoPlaybackRate}x</span>
+                  </div>
+                </div>
+
+                {/* Simulated Presentation Slide Display */}
+                <div className="relative z-10 max-w-2xl mx-auto w-full my-auto p-4 sm:p-6 rounded-xl bg-zinc-900/90 border border-zinc-700/80 shadow-2xl backdrop-blur-md">
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-indigo-600 text-white font-mono font-bold text-[11px]">
+                        {activeVideoModal.selectedChapter?.timeStr || activeVideoModal.question.videoClip.clipStartTime}
+                      </span>
+                      <span className="text-xs font-semibold text-zinc-300">
+                        {activeVideoModal.selectedChapter?.title || "핵심 강의 챕터"}
+                      </span>
+                    </div>
+                    {activeVideoModal.selectedChapter?.isExamPoint && (
+                      <Badge className="bg-amber-500 text-white font-bold text-[10px]">
+                        ★ 시험 출제 포인트
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Slide Content Highlights */}
+                  <div className="pt-3.5 space-y-2 text-left">
+                    <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 font-mono text-xs text-zinc-200">
+                      <p className="text-indigo-400 font-bold mb-1">[출제 연계 핵심 개념 요약]</p>
+                      <p className="leading-relaxed text-zinc-300">
+                        {activeVideoModal.question.explanation}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11.5px] text-zinc-400 pt-1">
+                      <span>📌 출제 문제: {activeVideoModal.question.question.slice(0, 48)}...</span>
+                      <span className="text-amber-400 font-semibold font-mono">배점 {activeVideoModal.question.points}점</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instructor Webcam PiP */}
+                <div className="absolute bottom-16 right-4 sm:right-6 z-20 w-32 sm:w-40 rounded-xl overflow-hidden border border-zinc-700 bg-zinc-900/90 shadow-xl p-2.5 backdrop-blur-sm">
+                  <div className="flex items-center justify-between text-[10px] pb-1 border-b border-zinc-800">
+                    <span className="text-rose-400 font-bold flex items-center gap-1 font-mono">
+                      <span className="size-1.5 rounded-full bg-rose-500 animate-pulse" />
+                      LIVE
+                    </span>
+                    <span className="text-zinc-400 truncate font-sans">
+                      {activeVideoModal.question.videoClip.instructor}
+                    </span>
+                  </div>
+                  <div className="h-10 sm:h-12 flex items-center justify-center bg-zinc-950 rounded mt-1.5 text-zinc-500 text-xs">
+                    <div className="flex items-center gap-1">
+                      <span className="size-1 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                      <span className="size-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                      <span className="size-2 bg-indigo-500 rounded-full animate-bounce" />
+                      <span className="size-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                      <span className="size-1 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Video Controls Bar */}
+                <div className="relative z-10 bg-zinc-950/90 rounded-xl border border-zinc-800/80 p-2.5 sm:p-3 backdrop-blur-md space-y-2 mt-auto">
+                  {/* Scrubber Progress Bar */}
+                  <div className="relative w-full h-2 rounded-full bg-zinc-800 overflow-hidden cursor-pointer">
+                    {/* Simulated Played Bar */}
+                    <div className="absolute top-0 left-0 bottom-0 w-2/5 bg-indigo-500 rounded-full" />
+                    {/* Highlighted Clip Interval */}
+                    <div className="absolute top-0 left-[35%] bottom-0 w-[12%] bg-amber-400/80" title="출제 핵심 구간" />
+                  </div>
+
+                  {/* Controls Row */}
+                  <div className="flex items-center justify-between text-zinc-300 text-xs">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      {/* Play/Pause */}
+                      <button
+                        onClick={() => setIsVideoPlaying(!isVideoPlaying)}
+                        className="size-8 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center transition-colors cursor-pointer"
+                        title={isVideoPlaying ? "일시정지" : "재생"}
+                      >
+                        {isVideoPlaying ? (
+                          <Pause className="size-4 fill-white" />
+                        ) : (
+                          <Play className="size-4 ml-0.5 fill-white" />
+                        )}
+                      </button>
+
+                      {/* 10s Rewind / Fast Forward */}
+                      <button
+                        onClick={() => {}}
+                        className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                        title="10초 뒤로"
+                      >
+                        <SkipBack className="size-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {}}
+                        className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                        title="10초 앞으로"
+                      >
+                        <SkipForward className="size-3.5" />
+                      </button>
+
+                      {/* Time display */}
+                      <span className="font-mono text-[11.5px] text-zinc-300">
+                        <b>{activeVideoModal.selectedChapter?.timeStr || activeVideoModal.question.videoClip.clipStartTime}</b>
+                        <span className="text-zinc-500"> / {activeVideoModal.question.videoClip.duration}</span>
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      {/* Playback rate toggle */}
+                      <button
+                        onClick={() => {
+                          const rates = [1.0, 1.25, 1.5, 2.0];
+                          const nextIdx = (rates.indexOf(videoPlaybackRate) + 1) % rates.length;
+                          setVideoPlaybackRate(rates[nextIdx]);
+                        }}
+                        className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors cursor-pointer"
+                      >
+                        {videoPlaybackRate}x
+                      </button>
+
+                      {/* Mute toggle */}
+                      <button
+                        onClick={() => setIsAudioMuted(!isAudioMuted)}
+                        className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                      >
+                        {isAudioMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+                      </button>
+
+                      {/* Fullscreen icon */}
+                      <button className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer">
+                        <Maximize2 className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Chapters & Commentary Panel */}
+              <div className="p-4 sm:p-5 space-y-4 bg-zinc-900/40">
+                {/* Chapters Quick Jump */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-zinc-200 flex items-center gap-1.5">
+                      <Clock className="size-3.5 text-indigo-400" />
+                      강의 타임라인 챕터 탐색
+                    </span>
+                    <span className="text-[11px] text-zinc-400">
+                      챕터 칩을 클릭하면 해당 시간대로 즉시 이동합니다.
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {activeVideoModal.question.videoClip.chapters.map((ch, chIdx) => {
+                      const isSelected = activeVideoModal.selectedChapter?.timeStr === ch.timeStr;
+                      return (
+                        <button
+                          key={chIdx}
+                          onClick={() => {
+                            setActiveVideoModal({
+                              ...activeVideoModal,
+                              selectedChapter: ch,
+                            });
+                            setIsVideoPlaying(true);
+                          }}
+                          className={`p-2.5 rounded-xl border text-left text-xs transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+                            isSelected
+                              ? "border-indigo-500 bg-indigo-950/60 text-white ring-1 ring-indigo-500"
+                              : ch.isExamPoint
+                              ? "border-amber-500/60 bg-amber-950/30 text-zinc-200 hover:bg-amber-950/50"
+                              : "border-zinc-800 bg-zinc-900/60 text-zinc-300 hover:bg-zinc-800"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-mono font-bold text-[11px] text-indigo-400 flex items-center gap-1">
+                              <Play className="size-2.5 fill-indigo-400" />
+                              {ch.timeStr}
+                            </span>
+                            {ch.isExamPoint && (
+                              <Badge className="bg-amber-500 text-white font-bold text-[9px] py-0 h-4">
+                                출제 포인트
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="font-medium truncate text-[11.5px] leading-tight">
+                            {ch.title}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Instructor Note Callout */}
+                <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 flex items-start gap-2.5 text-xs">
+                  <Quote className="size-4 text-indigo-400 shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <span className="font-bold text-zinc-200 block">
+                      {activeVideoModal.question.videoClip.instructor} 강사의 출제 총평
+                    </span>
+                    <p className="text-zinc-400 leading-relaxed break-keep">
+                      &ldquo;{activeVideoModal.question.videoClip.instructorQuote}&rdquo;
+                    </p>
+                  </div>
+                </div>
+
+                {/* Dialog Footer Actions */}
+                <div className="pt-2 border-t border-zinc-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setActiveVideoModal(null);
+                        if (onNavigate) {
+                          onNavigate("schedule");
+                        } else {
+                          const url = new URL(window.location.href);
+                          url.searchParams.set("tab", "schedule");
+                          window.history.replaceState({}, "", url.toString());
+                          window.dispatchEvent(new PopStateEvent("popstate"));
+                        }
+                      }}
+                      className="h-8.5 text-xs font-semibold gap-1.5 border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 cursor-pointer"
+                    >
+                      <Calendar className="size-3.5" />
+                      교육 캘린더 전체 다시보기
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setActiveVideoModal(null);
+                        if (onNavigate) {
+                          onNavigate("ai-review");
+                        } else {
+                          const url = new URL(window.location.href);
+                          url.searchParams.set("tab", "ai-review");
+                          window.history.replaceState({}, "", url.toString());
+                          window.dispatchEvent(new PopStateEvent("popstate"));
+                        }
+                      }}
+                      className="h-8.5 text-xs font-semibold gap-1.5 border-indigo-800/80 bg-indigo-950/50 hover:bg-indigo-900/60 text-indigo-300 cursor-pointer"
+                    >
+                      <Sparkles className="size-3.5 text-indigo-400" />
+                      AI 복습 탭에서 퀴즈로 재점검
+                    </Button>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setActiveVideoModal(null);
+                      setIsVideoPlaying(false);
+                    }}
+                    className="h-8.5 text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white cursor-pointer px-4"
+                  >
+                    닫기
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
