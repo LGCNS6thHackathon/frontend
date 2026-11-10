@@ -9,7 +9,9 @@ export async function sendDiscord(request: DeliveryRequest, postId: number): Pro
   try {
     const result = await request<{ status: string }>(path, "POST");
     return deliveryStatus(result?.status);
-  } catch {
+  } catch (error) {
+    // Configuration rejection happens before transmission; surface the server message.
+    if (error && typeof error === "object" && "code" in error && error.code === "DISCORD_NOT_CONFIGURED") throw error;
     try {
       const result = await request<{ status: string }>(path, "GET");
       return deliveryStatus(result?.status);

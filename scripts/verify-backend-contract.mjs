@@ -115,10 +115,18 @@ try {
   );
   assert.equal(calls.at(-1).path, "/api/assessments/5/questions");
   assert.equal(calls.at(-1).body.options.length, 2);
-  assert.ok(!("topicId" in calls.at(-1).body));
-  assert.ok(!("chapterId" in calls.at(-1).body));
+  assert.equal(calls.at(-1).body.topicId, 99);
+  assert.equal(calls.at(-1).body.chapterId, 88);
+  await client.save("videos", { id: 8, title: "강의", lectureDate: "2026-11-10", periodNo: 1, youtubeUrl: "https://youtu.be/abcdefghijk", visibility: "PRIVATE", durationSeconds: 120 }, true);
+  assert.equal(calls.at(-1).path, "/api/admin/cohorts/7/lecture-videos");
+  assert.equal(calls.at(-1).body.durationSeconds, 120);
+  await client.save("videos", { id: 8, visibility: "PUBLIC" }, false);
+  assert.equal(calls.at(-1).path, "/api/admin/lecture-videos/8");
+  assert.equal(calls.at(-1).method, "PATCH");
+  await client.remove("videos", 8);
+  assert.equal(calls.at(-1).method, "DELETE");
+  assert.equal(calls.at(-1).path, "/api/admin/lecture-videos/8");
   for (const resource of [
-    "videos",
     "chapters",
     "subjects",
     "units",
@@ -137,6 +145,18 @@ try {
     false,
   );
   assert.equal(calls.at(-1).path, "/api/cohorts/7/enrollments/9");
+  const oldFetch = globalThis.fetch;
+  try {
+    const videoCalls = [];
+    globalThis.fetch = async path => {
+      videoCalls.push(path);
+      return Response.json(path.includes("page=0") ? { items: [{ id: 8, lectureDate: "2026-11-10", visibility: "PRIVATE" }], total: 2 } : { items: [{ id: 9, lectureDate: "2026-11-09", visibility: "PUBLIC" }], total: 2 });
+    };
+    const videos = await client.list("videos");
+    assert.deepEqual(videos.map(video => video.id), [8, 9]);
+    assert.equal(videoCalls.length, 2);
+    assert.ok(videoCalls.every(path => path.startsWith("/api/admin/cohorts/7/lecture-videos?")));
+  } finally { globalThis.fetch = oldFetch; }
   for (const call of calls) {
     assert.ok(
       Object.entries(routes).some(
@@ -146,11 +166,11 @@ try {
             call.path,
           ),
       ),
-      `${call.method} ${call.path} is not in backend main`,
+      `${call.method} ${call.path} is not in backend develop`,
     );
   }
   console.log(
-    "PASS: 74 backend-main operations match the frontend route snapshot; unsupported resources never fetch; PUT required fields and supported payloads are preserved.",
+    "PASS: 97 backend-develop operations match the frontend route snapshot; unsupported resources never fetch; PUT required fields and supported payloads are preserved.",
   );
 } finally {
   globalThis.fetch = originalFetch;
