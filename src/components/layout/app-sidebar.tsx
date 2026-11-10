@@ -7,7 +7,6 @@ import {
   CalendarDays,
   ChevronRight,
   FileCheck2,
-  GraduationCap,
   HelpCircle,
   LayoutDashboard,
   LucideIcon,
@@ -29,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/components/live/session";
 import { useResource } from "@/components/live/shared";
 import { api } from "@/lib/api-client";
+import Logo from "./Logo";
 
 export type NavTabId =
   | "home"
@@ -136,26 +136,12 @@ export function AppSidebar({
     <aside className="w-64 shrink-0 border-r bg-card/60 backdrop-blur-xl flex flex-col justify-between h-screen sticky top-0 z-30 select-none">
       {/* Top Branding (Click to navigate Home) */}
       <div>
-        <div
-          onClick={() => onTabChange("home")}
-          className="p-5 flex items-center justify-between border-b bg-card/40 cursor-pointer hover:bg-muted/50 transition-colors group"
-          title="대시보드 홈으로 이동"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 text-white shadow-md shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-              <GraduationCap className="size-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base tracking-tight text-foreground group-hover:text-primary transition-colors">
-                  NEURON
-                </span>
-              </div>
-              <p className="text-[11px] text-muted-foreground font-medium">
-                LG CNS AM 캠프 6기
-              </p>
-            </div>
-          </div>
+        <div className="p-5 flex items-center justify-between border-b bg-card/40">
+          <Logo
+            size={36}
+            subtitle="LG CNS AM 캠프 6기"
+            onClick={() => onTabChange("home")}
+          />
         </div>
 
         {/* Navigation Groups (No chip designs on right) */}
