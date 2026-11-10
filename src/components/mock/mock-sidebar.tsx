@@ -7,7 +7,6 @@ import {
   CalendarDays,
   ChevronRight,
   FileCheck2,
-  GraduationCap,
   HelpCircle,
   LayoutDashboard,
   LucideIcon,
@@ -27,6 +26,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { INITIAL_NOTICES, INITIAL_USER } from "@/lib/lms-data";
+import Logo from "@/components/layout/Logo";
 
 export type NavTabId =
   | "home"
@@ -131,21 +131,11 @@ export function AppSidebar({
       {/* Top Branding */}
       <div>
         <div className="p-5 flex items-center justify-between border-b bg-card/40">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-sky-400 text-white shadow-md shadow-indigo-500/20">
-              <GraduationCap className="size-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base tracking-tight text-foreground">
-                  NEURON
-                </span>
-              </div>
-              <p className="text-[11px] text-muted-foreground font-medium">
-                LG CNS AM 캠프 6기
-              </p>
-            </div>
-          </div>
+          <Logo
+            size={40}
+            subtitle="LG CNS AM 캠프 6기"
+            onClick={() => onTabChange("home")}
+          />
         </div>
 
         {/* Navigation Groups (No chip designs on right) */}
