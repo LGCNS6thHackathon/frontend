@@ -83,6 +83,38 @@ export interface EvaluationItem {
   feedback: string;
 }
 
+export interface EvaluationQuestion {
+  id: number;
+  examId: number;
+  category: "Java" | "MSA" | "Cloud" | "React" | "Database" | "HTML/CSS";
+  level: "초급" | "중급" | "고급";
+  points: number;
+  question: string;
+  codeSnippet?: string;
+  options: string[];
+  correctIndex: number;
+  userAnswerIndex?: number;
+  explanation: string;
+  relatedAiTopic?: string;
+}
+
+export interface EvaluationMeta {
+  id: number;
+  round: string;
+  course: string;
+  testDate: string;
+  timeLimit: string;
+  questionCount: number;
+  status: "완료" | "응시 가능" | "예정";
+  myScore?: number;
+  avgScore?: number;
+  highestScore?: number;
+  rank?: string;
+  canTakeExam?: boolean;
+  radarMetrics?: EvaluationItem["radarMetrics"];
+  feedback?: string;
+}
+
 export interface AssignmentItem {
   id: number;
   title: string;
@@ -339,6 +371,521 @@ export const INITIAL_EVALUATIONS: EvaluationItem[] = [
       { subject: "협업 & Git 커뮤니케이션", myScore: 90, avgScore: 80, fullScore: 100 },
     ],
     feedback: "Docker 기반 멀티 컨테이너 환경 구축에 성공했으나, Kubernetes 인그레스 라우팅 및 헬름 차트 작성 영역의 복습이 권장됩니다.",
+  },
+];
+
+// ==========================================
+// WSTS 공식 연동 역량평가 차수별 메타데이터 (https://lms.wsts.kr/evaluation/list 실사)
+// ==========================================
+export const WSTS_EVALUATIONS: EvaluationMeta[] = [
+  {
+    id: 1,
+    round: "1차 사전평가",
+    course: "풀스택(Full-Stack) AI서비스 개발",
+    testDate: "2026.07.28 17:00 ~ 17:40",
+    timeLimit: "40분",
+    questionCount: 60,
+    status: "완료",
+    myScore: 46,
+    avgScore: 57,
+    highestScore: 92,
+    rank: "상위 65%",
+    radarMetrics: [
+      { subject: "HTML/CSS 기초", myScore: 55, avgScore: 62, fullScore: 100 },
+      { subject: "JavaScript 핵심", myScore: 42, avgScore: 56, fullScore: 100 },
+      { subject: "React 프레임워크", myScore: 40, avgScore: 54, fullScore: 100 },
+      { subject: "알고리즘 & 자료구조", myScore: 48, avgScore: 58, fullScore: 100 },
+      { subject: "데이터베이스 (SQL)", myScore: 45, avgScore: 55, fullScore: 100 },
+    ],
+    feedback: "사전 진단 결과 자바스크립트 스코프/호이스팅 및 React 비동기 라이프사이클 영역의 선수 학습이 필요합니다.",
+  },
+  {
+    id: 2,
+    round: "1차 사후평가",
+    course: "풀스택(Full-Stack) AI서비스 개발",
+    testDate: "2026.10.28 17:00 ~ 17:40",
+    timeLimit: "40분",
+    questionCount: 80,
+    status: "완료",
+    myScore: 85,
+    avgScore: 81,
+    highestScore: 98,
+    rank: "상위 18%",
+    radarMetrics: [
+      { subject: "HTML/CSS 마크업", myScore: 92, avgScore: 84, fullScore: 100 },
+      { subject: "JavaScript/ES6+", myScore: 84, avgScore: 80, fullScore: 100 },
+      { subject: "React 생태계", myScore: 88, avgScore: 82, fullScore: 100 },
+      { subject: "REST API & 연동", myScore: 82, avgScore: 79, fullScore: 100 },
+      { subject: "컴포넌트 설계", myScore: 84, avgScore: 80, fullScore: 100 },
+    ],
+    feedback: "사전평가 대비 +39점의 괄목할 성장을 이루었습니다. 모던 웹 컴포넌트 아키텍처와 상태 관리가 매우 안정적입니다.",
+  },
+  {
+    id: 3,
+    round: "2차 사전평가",
+    course: "AM 기술(MSA, Cloud, Agile)",
+    testDate: "2026.10.06 17:00 ~ 17:40",
+    timeLimit: "40분",
+    questionCount: 60,
+    status: "완료",
+    myScore: 57,
+    avgScore: 68,
+    highestScore: 95,
+    rank: "상위 58%",
+    radarMetrics: [
+      { subject: "Java OOP & 기본기", myScore: 65, avgScore: 72, fullScore: 100 },
+      { subject: "Spring Boot 기초", myScore: 58, avgScore: 69, fullScore: 100 },
+      { subject: "MSA 개념", myScore: 52, avgScore: 65, fullScore: 100 },
+      { subject: "Docker 컨테이너", myScore: 54, avgScore: 67, fullScore: 100 },
+      { subject: "클라우드 인프라", myScore: 56, avgScore: 67, fullScore: 100 },
+    ],
+    feedback: "엔터프라이즈 MSA 및 컨테이너 가상화 기본기에 대한 이론적 배경 학습이 요구됩니다.",
+  },
+  {
+    id: 4,
+    round: "2차 사후평가",
+    course: "AM 기술(MSA, Cloud, Agile)",
+    testDate: "2026.10.30 17:10 ~ 17:50",
+    timeLimit: "40분",
+    questionCount: 80,
+    status: "완료",
+    myScore: 93,
+    avgScore: 95,
+    highestScore: 100,
+    rank: "상위 10%",
+    radarMetrics: [
+      { subject: "Java 21 & 스프링 3", myScore: 95, avgScore: 94, fullScore: 100 },
+      { subject: "MSA 분산 트랜잭션", myScore: 90, avgScore: 93, fullScore: 100 },
+      { subject: "Kafka 이벤트 스트리밍", myScore: 92, avgScore: 95, fullScore: 100 },
+      { subject: "Docker/K8s 배포", myScore: 94, avgScore: 96, fullScore: 100 },
+      { subject: "애자일 스크럼 실무", myScore: 94, avgScore: 97, fullScore: 100 },
+    ],
+    feedback: "실무급 분산 아키텍처 구현 역량이 입증되었습니다. 클래스 평균 95점의 초고득점 그룹에 진입했습니다.",
+  },
+  {
+    id: 5,
+    round: "3차 종합 실무역량평가",
+    course: "클라우드 네이티브 MSA & Spring Cloud 심화",
+    testDate: "2026.11.09 (오늘 응시 가능)",
+    timeLimit: "40분",
+    questionCount: 15,
+    status: "응시 가능",
+    canTakeExam: true,
+  },
+];
+
+// ==========================================
+// 3차 실전 문제풀이 시험용 15문항 데이터셋
+// ==========================================
+export const INITIAL_EXAM_QUESTIONS: EvaluationQuestion[] = [
+  {
+    id: 1,
+    examId: 5,
+    category: "Java",
+    level: "중급",
+    points: 7,
+    question: "Java 21의 가상 스레드(Virtual Threads)에 대한 설명으로 올바르지 않은 것은?",
+    codeSnippet: `// Virtual Thread 생성 예시
+try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+    IntStream.range(0, 10_000).forEach(i -> {
+        executor.submit(() -> {
+            Thread.sleep(Duration.ofSeconds(1));
+            return i;
+        });
+    });
+}`,
+    options: [
+      "가상 스레드는 OS 커널 스레드와 1:1로 매핑되는 무거운 플랫폼 스레드이다.",
+      "블로킹 I/O 작업(네트워크, 디스크 I/O) 발생 시 캐리어 스레드를 양보(unmount)하여 높은 동시성을 달성한다.",
+      "synchronized 블록이나 네이티브 메서드 호출 시 핀닝(Pinning) 현상이 발생하여 성능 저하가 일어날 수 있다.",
+      "스레드 풀(Thread Pool)에 보관해 재사용하기보다는 작업당 하나의 가상 스레드를 새로 생성해 쓰고 버리는 패턴이 권장된다.",
+    ],
+    correctIndex: 0,
+    explanation: "가상 스레드는 JVM 사용자 영역에서 관리되는 경량 스레드로, 소수의 OS 캐리어 스레드(Carrier Thread) 위에서 M:N 다중화(Multiplexing) 방식으로 동작합니다.",
+    relatedAiTopic: "Java 21 가상 스레드 대규모 동시성",
+  },
+  {
+    id: 2,
+    examId: 5,
+    category: "MSA",
+    level: "고급",
+    points: 7,
+    question: "마이크로서비스 환경에서 여러 서비스에 걸친 분산 트랜잭션을 처리하기 위한 Saga 패턴 중, 이벤트 브로커(Kafka 등)를 활용한 코레오그래피(Choreography) 방식의 특징으로 올바른 것은?",
+    options: [
+      "중앙 오케스트레이터 서비스가 모든 비즈니스 로직과 호출 순서를 중앙 집중식으로 통제한다.",
+      "각 서비스가 도메인 이벤트를 발행하고 다른 서비스의 이벤트를 구독하여 자율적으로 로컬 트랜잭션을 실행하고 보상(Compensating) 트랜잭션을 처리한다.",
+      "2단계 커밋(2-Phase Commit) 프로토콜을 기반으로 모든 참여 노드의 락을 획득하므로 강한 일관성(Strong Consistency)을 보장한다.",
+      "서비스 간 결합도가 매우 높아 신규 서비스를 추가할 때마다 중앙 컨트롤러 코드를 반드시 수정해야 한다.",
+    ],
+    correctIndex: 1,
+    explanation: "코레오그래피 Saga 패턴은 중앙 조율자 없이 각 서비스가 Pub/Sub 이벤트를 통해 느슨하게 결합되어 비동기적으로 트랜잭션과 보상 로직을 수행합니다.",
+    relatedAiTopic: "Event-Driven MSA 아키텍처와 Kafka Saga 패턴",
+  },
+  {
+    id: 3,
+    examId: 5,
+    category: "Cloud",
+    level: "중급",
+    points: 7,
+    question: "Spring Cloud Gateway에서 라우팅 필터(GatewayFilter) 체인을 구성할 때, Resilience4j CircuitBreaker 필터의 주된 역할은 무엇인가?",
+    codeSnippet: `spring:
+  cloud:
+    gateway:
+      routes:
+        - id: order-service-route
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api/v1/orders/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: orderCircuitBreaker
+                fallbackUri: forward:/fallback/orders`,
+    options: [
+      "클라이언트의 JWT 토큰 서명을 검증하고 인가되지 않은 요청을 401 Unauthorized로 거부한다.",
+      "목적지 서비스(ORDER-SERVICE) 장애나 지연 발생 시 호출을 차단하고 정의된 fallbackUri로 요청을 우회하여 연쇄 장애(Cascading Failure)를 방지한다.",
+      "요청 헤더의 IP를 기반으로 초당 요청 건수(Rate Limit)를 제한한다.",
+      "HTTP 요청 본문의 JSON 데이터를 압축하여 전송 대역폭을 절약한다.",
+    ],
+    correctIndex: 1,
+    explanation: "Circuit Breaker 패턴은 다운스트림 서비스 장애 감지 시 회로를 OPEN하여 더 이상의 실패 요청 전송을 막고 사전 정의된 Fallback 응답을 반환하여 시스템 전체 회복 탄력성을 유지합니다.",
+    relatedAiTopic: "Spring Cloud Gateway 라우팅 & 회복 탄력성",
+  },
+  {
+    id: 4,
+    examId: 5,
+    category: "React",
+    level: "중급",
+    points: 6,
+    question: "React 함수형 컴포넌트에서 useEffect 훅의 의존성 배열에 외부 상태 변수를 누락했을 때 발생하는 'Stale Closure' 현상에 대한 올바른 설명은?",
+    codeSnippet: `function Counter() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // 의존성 배열이 빈 배열 []인 경우
+      console.log("Current Count:", count);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []); // count 누락!
+  
+  return <button onClick={() => setCount(count + 1)}>+1</button>;
+}`,
+    options: [
+      "컴포넌트가 무한 렌더링 루프에 빠져 브라우저 메모리가 고갈된다.",
+      "타이머 콜백 함수가 마운트 시점의 렌더링 스코프에 클로저로 캡처된 이전 count 값(0)을 계속 참조하여 값이 갱신되지 않는다.",
+      "React가 컴포넌트 트리에서 DOM 노드를 언마운트하고 에러 바운더리를 발동시킨다.",
+      "Next.js Turbopack 빌드 타임에 SyntaxError가 발생하여 서버가 기동되지 않는다.",
+    ],
+    correctIndex: 1,
+    explanation: "자바스크립트 클로저(Closure)는 함수가 선언된 시점의 어휘적 환경(Lexical Scope)을 기억하므로, 의존성 배열에 최신 상태를 전달하지 않으면 과거의 렌더링 스냅샷 값만을 지속적으로 바라보게 됩니다.",
+    relatedAiTopic: "React Hook 클로저와 의존성 배열 최적화",
+  },
+  {
+    id: 5,
+    examId: 5,
+    category: "Database",
+    level: "고급",
+    points: 7,
+    question: "데이터베이스 트랜잭션 격리 수준(Isolation Level) 중, 두 개의 트랜잭션이 동일한 범위의 조건으로 검색했을 때 다른 트랜잭션의 커밋에 의해 결과 행의 개수가 달라지는 '팬텀 리드(Phantom Read)'를 방지할 수 있는 가장 엄격한 격리 수준은?",
+    options: [
+      "READ UNCOMMITTED",
+      "READ COMMITTED",
+      "REPEATABLE READ",
+      "SERIALIZABLE",
+    ],
+    correctIndex: 3,
+    explanation: "SERIALIZABLE 격리 수준은 트랜잭션을 완전히 순차적으로 실행하여 Dirty Read, Non-Repeatable Read, Phantom Read 현상을 모두 완벽히 방지합니다. (참고: PostgreSQL의 REPEATABLE READ도 MVCC와 가상 락으로 팬텀 리드를 기본 차단함)",
+    relatedAiTopic: "ACID 트랜잭션 격리 수준과 동시성 제어",
+  },
+  {
+    id: 6,
+    examId: 5,
+    category: "HTML/CSS",
+    level: "초급",
+    points: 6,
+    question: "CSS 선택자의 특이성(Specificity) 계산 가중치에서 우선 순위가 가장 높은 것은 무엇인가?",
+    options: [
+      "요소(Type/Tag) 선택자 (예: div, p)",
+      "클래스(Class) 선택자 (예: .container)",
+      "아이디(ID) 선택자 (예: #header)",
+      "HTML 태그 인라인 스타일 속성 (예: style='color: red')",
+    ],
+    correctIndex: 3,
+    explanation: "CSS 특이성 가중치는 인라인 스타일(1000) > ID 선택자(100) > 클래스/의사클래스(10) > 요소 선택자(1) 순으로 결정됩니다.",
+    relatedAiTopic: "CSS Cascade 및 특이성 우선순위 법칙",
+  },
+  {
+    id: 7,
+    examId: 5,
+    category: "Java",
+    level: "중급",
+    points: 7,
+    question: "다음 JavaScript 코드의 실행 결과로 콘솔에 출력되는 값은 무엇인가?",
+    codeSnippet: `console.log(greeting);
+var greeting = "Hello World";
+console.log(greeting);`,
+    options: [
+      "ReferenceError 발생",
+      "undefined 그 후 'Hello World'",
+      "'Hello World' 그 후 'Hello World'",
+      "null 그 후 'Hello World'",
+    ],
+    correctIndex: 1,
+    explanation: "var 키워드로 선언된 변수는 호이스팅(Hoisting) 시 선언부가 해당 스코프 최상단으로 끌어올려지며 undefined로 초기화됩니다. 실제 값 할당은 코드 실행 라인에 도달했을 때 수행됩니다.",
+    relatedAiTopic: "JavaScript 호이스팅과 실행 컨텍스트",
+  },
+  {
+    id: 8,
+    examId: 5,
+    category: "Cloud",
+    level: "고급",
+    points: 7,
+    question: "도커(Docker) 컨테이너 빌드 시 이미지 용량을 극적으로 줄이고 빌드 도구와 컴파일 산출물을 최종 프로덕션 런타임 이미지와 분리하기 위해 활용하는 최적화 기법은?",
+    options: [
+      "Multi-stage Build (멀티스테이지 빌드)",
+      "Docker Daemon Swarm 모드",
+      "Layer Caching 비활성화 (--no-cache)",
+      "Bridge Network 격리",
+    ],
+    correctIndex: 0,
+    explanation: "멀티스테이지 빌드는 단일 Dockerfile 내에서 여러 개의 FROM 절을 사용하여, 컴파일/테스트 단계의 무거운 SDK를 버리고 빌드 결과물(jar, 정적 파일)만을 가벼운 JRE/알파인 런타임 이미지에 복사하여 배포 이미지를 경량화합니다.",
+    relatedAiTopic: "Docker 컨테이너 경량화와 Multi-stage Build",
+  },
+  {
+    id: 9,
+    examId: 5,
+    category: "MSA",
+    level: "중급",
+    points: 7,
+    question: "Kafka 이벤트 스트리밍 시스템에서 동일한 파티션 키(Partition Key)를 가진 메시지들의 전달 보장 특성으로 올바른 것은?",
+    options: [
+      "클러스터 전체의 모든 토픽에 대해 절대적 총 순서(Total Ordering)가 보장된다.",
+      "동일한 파티션 내부에서는 메시지가 인입된 순서대로 엄격한 순서(Ordering)가 보장된다.",
+      "네트워크 지연 발생 시 파티션 내부에서도 역순으로 컨슈머에게 전달된다.",
+      "파티션 키는 오직 브로커 로드밸런싱용이며 메시지 정렬 순서와는 무관하다.",
+    ],
+    correctIndex: 1,
+    explanation: "카프카는 토픽 전체가 아닌 '개별 파티션 단위'로 메시지의 엄격한 순서(In-order)를 보장합니다. 따라서 동일한 비즈니스 엔티티(예: 주문ID)는 동일 파티션 키로 발행해야 순차 처리가 보장됩니다.",
+    relatedAiTopic: "Kafka 토픽 파티셔닝과 순서 보장 아키텍처",
+  },
+  {
+    id: 10,
+    examId: 5,
+    category: "Database",
+    level: "중급",
+    points: 6,
+    question: "마이크로서비스에서 로컬 데이터베이스 트랜잭션 커밋과 카프카 메시지 발행 간의 원자성(Atomicity)을 보장하기 위해 널리 사용되는 디자인 패턴은?",
+    options: [
+      "CQRS (Command Query Responsibility Segregation)",
+      "Transactional Outbox Pattern (아웃박스 패턴)",
+      "Circuit Breaker Pattern",
+      "API Composition Pattern",
+    ],
+    correctIndex: 1,
+    explanation: "Transactional Outbox 패턴은 비즈니스 데이터 수정과 발행할 메시지를 하나의 RDBMS 로컬 트랜잭션으로 OUTBOX 테이블에 함께 저장한 뒤, Debezium(CDC)이나 별도 폴러가 카프카로 안전하게 발행하여 분실을 방지합니다.",
+    relatedAiTopic: "Transactional Outbox 패턴과 데이터 정합성",
+  },
+  {
+    id: 11,
+    examId: 5,
+    category: "React",
+    level: "중급",
+    points: 7,
+    question: "Next.js 15 App Router에서 Server Component와 Client Component의 경계에 관한 설명으로 옳지 않은 것은?",
+    options: [
+      "기본적으로 app 디렉토리 내의 모든 컴포넌트는 Server Component로 렌더링된다.",
+      "Client Component는 파일 최상단에 'use client' 지시어를 선언해야 한다.",
+      "Server Component는 브라우저 전용 API(window, localStorage)나 onClick 이벤트 핸들러를 직접 바인딩할 수 없다.",
+      "Client Component 내부에서는 Server Component를 직접 import하여 자식 컴포넌트로 JSX를 작성할 수 있다.",
+    ],
+    correctIndex: 3,
+    explanation: "Client Component 내부에서 Server Component를 직접 import하면 해당 컴포넌트도 Client 모듈 번들에 포함되어버립니다. Server Component를 Client Component 내부에서 쓰려면 children prop으로 넘겨주는 컴포지션(Composition) 패턴을 사용해야 합니다.",
+    relatedAiTopic: "Next.js 15 Server Component & Client 렌더링 경계",
+  },
+  {
+    id: 12,
+    examId: 5,
+    category: "Cloud",
+    level: "고급",
+    points: 7,
+    question: "쿠버네티스(Kubernetes)에서 외부 HTTP/HTTPS 트래픽을 클러스터 내부의 여러 서비스(Service)로 URL 경로 및 호스트 기반으로 라우팅해주는 L7 리소스는?",
+    options: [
+      "Ingress (인그레스)",
+      "ConfigMap",
+      "PersistentVolumeClaim",
+      "ClusterIP Service",
+    ],
+    correctIndex: 0,
+    explanation: "쿠버네티스 Ingress는 클러스터 외부의 HTTP/S 요청을 도메인 이름이나 URI 경로 규칙에 맞춰 내부 Service들로 스마트하게 포워딩해주는 L7 로드밸런서 리소스입니다.",
+    relatedAiTopic: "Kubernetes Ingress Controller 라우팅 실무",
+  },
+  {
+    id: 13,
+    examId: 5,
+    category: "HTML/CSS",
+    level: "초급",
+    points: 6,
+    question: "HTML5 명세에서 콘텐츠의 텍스트 길이와 상관없이 항상 가로폭 100%를 차지하는 독립된 블록 라인을 생성하는 기본 블록(Block) 요소는?",
+    options: [
+      "<span>",
+      "<div>",
+      "<a>",
+      "<small>",
+    ],
+    correctIndex: 1,
+    explanation: "<div>는 기본 display 값이 block인 대표적인 블록 레벨 컨테이너 요소로, 부모 컨테이너의 가로 전폭을 차지하며 줄바꿈을 유발합니다. (span, a, small은 inline 요소)",
+    relatedAiTopic: "HTML 블록(Block) vs 인라인(Inline) 레이아웃 모델",
+  },
+  {
+    id: 14,
+    examId: 5,
+    category: "Java",
+    level: "중급",
+    points: 6,
+    question: "Spring Framework의 캐시 추상화 어노테이션 중, 메서드 실행 전에 캐시를 조회하여 이미 캐시된 데이터가 있으면 메서드를 실행하지 않고 캐시된 값을 즉시 반환하는 어노테이션은?",
+    options: [
+      "@Cacheable",
+      "@CachePut",
+      "@CacheEvict",
+      "@Caching",
+    ],
+    correctIndex: 0,
+    explanation: "@Cacheable은 메서드 호출 전 캐시 적중(Cache Hit) 여부를 확인하여 존재하면 반환하고, 부재(Miss) 시에만 실제 메서드를 수행하고 결과를 캐시에 저장합니다. (반면 @CachePut은 항상 메서드를 실행하고 캐시를 갱신함)",
+    relatedAiTopic: "Spring Cache 추상화와 Redis 캐싱 전략",
+  },
+  {
+    id: 15,
+    examId: 5,
+    category: "MSA",
+    level: "고급",
+    points: 7,
+    question: "마이크로서비스 아키텍처에서 서비스 인스턴스들의 동적 IP와 포트를 실시간으로 등록하고 발견(Discovery)할 수 있게 해주는 Spring Cloud 넷플릭스 핵심 컴포넌트는?",
+    options: [
+      "Eureka Service Registry & Discovery",
+      "Zuul 1.0",
+      "Ribbon (클라이언트 로드밸런서)",
+      "Hystrix Dashboard",
+    ],
+    correctIndex: 0,
+    explanation: "Spring Cloud Netflix Eureka는 각 마이크로서비스가 기동 시 자신의 호스트/포트 정보를 Eureka 서버에 하트비트로 등록하고, API 게이트웨이나 타 서비스가 Eureka로부터 위치를 동적으로 조회(Lookup)할 수 있도록 지원하는 서비스 레지스트리입니다.",
+    relatedAiTopic: "Eureka 서비스 디스커버리와 동적 인스턴스 관리",
+  },
+];
+
+// ==========================================
+// 1차 사전평가 (46점 기응시) 오답노트 문항 데이터셋
+// ==========================================
+export const PAST_EXAM_FEEDBACK_QUESTIONS: EvaluationQuestion[] = [
+  {
+    id: 101,
+    examId: 1,
+    category: "HTML/CSS",
+    level: "초급",
+    points: 5,
+    question: "다음 요소 중 콘텐츠의 길이와 상관없이 항상 독립된 하나의 가로 블록 라인을 만드는 적절한 요소는 무엇인가?",
+    options: [
+      "<span>",
+      "<meta>",
+      "<div>",
+      "<a>",
+    ],
+    correctIndex: 2,
+    userAnswerIndex: 0, // 오답 선택: <span> 선택
+    explanation: "<div> 요소는 블록 레벨 태그로 문자열이나 자식 콘텐츠의 길이와 상관없이 한 개의 온전한 가로 블록을 생성합니다.",
+    relatedAiTopic: "HTML 블록 요소 vs 인라인 요소 구조",
+  },
+  {
+    id: 102,
+    examId: 1,
+    category: "HTML/CSS",
+    level: "초급",
+    points: 5,
+    question: "CSS 선택자의 특이성(specificity) 계산에서 가장 높은 우선 순위를 갖는 것은 무엇인가?",
+    options: [
+      "요소(Type) 선택자 (가중치 1)",
+      "클래스(Class) 선택자 (가중치 10)",
+      "ID 선택자 (가중치 100)",
+      "인라인 스타일 (style 속성, 가중치 1000)",
+    ],
+    correctIndex: 3,
+    userAnswerIndex: 2, // 오답 선택: ID 선택자 선택
+    explanation: "특이성 가중치는 인라인 스타일(1000) > ID(100) > 클래스(10) > 요소(1) 순으로 계산됩니다.",
+    relatedAiTopic: "CSS 특이성 점수 계산법",
+  },
+  {
+    id: 103,
+    examId: 1,
+    category: "Java",
+    level: "초급",
+    points: 5,
+    question: "다음 코드가 콘솔에 출력하는 값으로 올바른 것은 무엇인가?",
+    codeSnippet: `console.log(x);
+var x = 5;`,
+    options: [
+      "5",
+      "undefined",
+      "ReferenceError: x is not defined",
+      "null",
+    ],
+    correctIndex: 1,
+    userAnswerIndex: 2, // 오답 선택: ReferenceError 선택
+    explanation: "var 키워드 변수는 호이스팅되어 선언부가 스코프 최상단으로 끌어올려지며 undefined로 기본 초기화됩니다. 실제 할당은 2번째 줄에서 일어납니다.",
+    relatedAiTopic: "JavaScript 변수 호이스팅과 TDZ(Temporal Dead Zone)",
+  },
+  {
+    id: 104,
+    examId: 1,
+    category: "React",
+    level: "중급",
+    points: 5,
+    question: "React Hook 규칙 중 useEffect 훅의 의존성 배열에 상태 변수를 누락했을 때 발생할 수 있는 주요 부작용은?",
+    options: [
+      "무한 렌더링 루프",
+      "브라우저 메모리 누수",
+      "Stale Closure (오래된 상태 클로저 참조)",
+      "컴파일 빌드 실패",
+    ],
+    correctIndex: 2,
+    userAnswerIndex: 0, // 오답 선택: 무한 루프 선택
+    explanation: "의존성 배열을 누락하면 컴포넌트가 재렌더링되더라도 이펙트 함수 내부의 클로저가 이전 마운트 당시의 상태값 스냅샷에 고정되는 Stale Closure 문제가 발생합니다.",
+    relatedAiTopic: "React useEffect 클로저 함정과 최신 상태 동기화",
+  },
+  {
+    id: 105,
+    examId: 1,
+    category: "React",
+    level: "초급",
+    points: 5,
+    question: "React에서 여러 개의 엘리먼트를 반환할 때 별도의 DOM 노드를 추가하지 않고 그룹화하기 위해 사용하는 태그는?",
+    options: [
+      "<div>",
+      "<Fragment> (또는 빈 태그 <>...</>)",
+      "<section>",
+      "<template>",
+    ],
+    correctIndex: 1,
+    userAnswerIndex: 1, // 정답 맞힘!
+    explanation: "React.Fragment(또는 축약형 <>...</>)는 실제 렌더링되는 HTML DOM에 아무런 마크업 노드를 생성하지 않고 자식들을 감쌉니다.",
+    relatedAiTopic: "React Fragment와 불필요한 DOM 래퍼 제거",
+  },
+  {
+    id: 106,
+    examId: 1,
+    category: "Database",
+    level: "초급",
+    points: 5,
+    question: "SQL에서 중복된 행(Row)을 제거하고 고유한 값만을 조회하고자 할 때 SELECT 절 다음에 사용하는 키워드는?",
+    options: [
+      "UNIQUE",
+      "DISTINCT",
+      "GROUP BY",
+      "HAVING",
+    ],
+    correctIndex: 1,
+    userAnswerIndex: 1, // 정답 맞힘!
+    explanation: "SELECT DISTINCT 컬럼명 FROM 테이블 구문은 결과 집합에서 중복된 튜플을 필터링하고 고유값만 반환합니다.",
+    relatedAiTopic: "SQL 기초 데이터 조회와 DISTINCT 필터",
   },
 ];
 
