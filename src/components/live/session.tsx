@@ -112,6 +112,8 @@ function ApiSessionProvider({ children }: { children: React.ReactNode }) {
     [password, setPassword] = useState(""),
     [error, setError] = useState(""),
     [saving, setSaving] = useState(false),
+    [demoEnabled, setDemoEnabled] = useState(false),
+    [demoSaving, setDemoSaving] = useState(false),
     [toasts, setToasts] = useState<
       { id: number; message: string; error: boolean }[]
     >([]);
@@ -132,6 +134,9 @@ function ApiSessionProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
   useEffect(() => {
+    api<{ enabled: boolean }>("/api/auth/demo-admin")
+      .then(({ enabled }) => setDemoEnabled(enabled))
+      .catch(() => setDemoEnabled(false));
     reload()
       .catch((e) => {
         if (e.status !== 401) setError(e.message);
@@ -230,10 +235,39 @@ function ApiSessionProvider({ children }: { children: React.ReactNode }) {
                   {error}
                 </p>
               )}
-              <Button type="submit" className="w-full" disabled={saving}>
+              <Button type="submit" className="w-full" disabled={saving || demoSaving}>
                 {saving ? "로그인 중…" : "로그인"}
               </Button>
             </form>
+            {demoEnabled && (
+              <div className="mt-4 space-y-2 border-t pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={saving || demoSaving}
+                  onClick={async () => {
+                    setDemoSaving(true);
+                    setError("");
+                    try {
+                      await api("/api/auth/demo-admin", "POST");
+                      setPassword("");
+                      await reload();
+                      router.replace("/admin");
+                    } catch (e) {
+                      setError((e as Error).message);
+                    } finally {
+                      setDemoSaving(false);
+                    }
+                  }}
+                >
+                  {demoSaving ? "관리자로 로그인 중…" : "관리자 바로 로그인"}
+                </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  발표용 관리자 계정으로 바로 시작합니다.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
         {toast}
