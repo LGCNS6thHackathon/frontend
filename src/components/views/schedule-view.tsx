@@ -299,22 +299,20 @@ export function ScheduleView({ onNavigate }: ScheduleViewProps) {
               <div className="flex items-center rounded-lg bg-muted p-0.5 border border-border/40">
                 <button
                   onClick={() => setViewMode("calendar")}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                    viewMode === "calendar"
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${viewMode === "calendar"
                       ? "bg-background text-primary shadow-xs"
                       : "text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <CalendarIcon className="size-3.5" />
                   <span>달력</span>
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                    viewMode === "list"
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${viewMode === "list"
                       ? "bg-background text-primary shadow-xs"
                       : "text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <List className="size-3.5" />
                   <span>목록</span>
@@ -332,7 +330,7 @@ export function ScheduleView({ onNavigate }: ScheduleViewProps) {
               <span className="size-2 rounded-full bg-emerald-500" /> 해커톤
             </span>
             <span className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
-              <span className="size-2 rounded-full bg-purple-500" /> 특강(Agile)
+              <span className="size-2 rounded-full bg-purple-500" /> 특강
             </span>
             <span className="flex items-center gap-1.5 text-muted-foreground text-[11px]">
               <span className="size-2 rounded-full bg-amber-500" /> 멘토링
@@ -384,17 +382,15 @@ export function ScheduleView({ onNavigate }: ScheduleViewProps) {
                   <div
                     key={dayNum}
                     onClick={() => item && handleItemClick(item)}
-                    className={`min-h-[105px] sm:min-h-[124px] p-2 sm:p-2.5 rounded-xl border transition-all flex flex-col justify-between relative group ${
-                      item
+                    className={`min-h-[105px] sm:min-h-[124px] p-2 sm:p-2.5 rounded-xl border transition-all flex flex-col justify-between relative group ${item
                         ? "cursor-pointer hover:border-primary/50 hover:shadow-xs active:scale-[0.99]"
                         : "bg-muted/10 opacity-40 border-border/30"
-                    } ${
-                      isToday
+                      } ${isToday
                         ? "ring-2 ring-primary bg-primary/[0.04] dark:bg-primary/[0.08] font-semibold border-primary/50 shadow-xs"
                         : isHoliday
-                        ? "bg-muted/15 dark:bg-muted/10 border-dashed border-border/60"
-                        : "bg-card border-border/70"
-                    }`}
+                          ? "bg-muted/15 dark:bg-muted/10 border-dashed border-border/60"
+                          : "bg-card border-border/70"
+                      }`}
                   >
                     {/* Top Row: Date Number (Left) & Attendance Status (Right) */}
                     <div className="flex items-center justify-between">
@@ -405,13 +401,12 @@ export function ScheduleView({ onNavigate }: ScheduleViewProps) {
                         </span>
                       ) : (
                         <span
-                          className={`text-xs font-mono font-medium ${
-                            isSunday
+                          className={`text-xs font-mono font-medium ${isSunday
                               ? "text-rose-500 font-semibold"
                               : isSaturday
-                              ? "text-sky-500 font-semibold"
-                              : "text-foreground"
-                          }`}
+                                ? "text-sky-500 font-semibold"
+                                : "text-foreground"
+                            }`}
                         >
                           {dayNum}
                         </span>
@@ -495,22 +490,20 @@ export function ScheduleView({ onNavigate }: ScheduleViewProps) {
                 <div
                   key={item.id}
                   onClick={() => handleItemClick(item)}
-                  className={`py-3.5 px-3 rounded-xl transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                    isToday
+                  className={`py-3.5 px-3 rounded-xl transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isToday
                       ? "bg-primary/[0.04] dark:bg-primary/[0.08] border border-primary/30"
                       : "hover:bg-muted/50"
-                  }`}
+                    }`}
                 >
                   {/* Left: Date Stamp Block */}
                   <div className="flex items-center gap-3 shrink-0">
                     <div
-                      className={`flex flex-col items-center justify-center size-12 rounded-xl font-mono border ${
-                        isToday
+                      className={`flex flex-col items-center justify-center size-12 rounded-xl font-mono border ${isToday
                           ? "bg-primary text-primary-foreground border-primary shadow-xs"
                           : item.type === "holiday"
-                          ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:border-rose-900"
-                          : "bg-muted text-foreground border-border"
-                      }`}
+                            ? "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:border-rose-900"
+                            : "bg-muted text-foreground border-border"
+                        }`}
                     >
                       <span className="text-[10px] font-bold uppercase leading-none">
                         {item.dayOfWeek}
