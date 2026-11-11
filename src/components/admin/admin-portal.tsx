@@ -1670,6 +1670,24 @@ export default function AdminPortal() {
                 </button>
               )}
               <div className="admin-form-footer">
+                {editor?.resource === "posts" && editor.isNew && (
+                  <button
+                    type="button"
+                    className="admin-secondary"
+                    disabled={busy}
+                    onClick={() => {
+                      setDraft(current => ({
+                        ...current,
+                        category: "SYSTEM",
+                        title: "[시스템 점검] 뉴런 서비스 이용 일시 중단 안내",
+                        body: "안정적인 서비스 제공을 위해 시스템 점검을 진행합니다.\n이용에 불편을 드려 죄송합니다. 더 안정적인 서비스로 찾아뵙겠습니다.",
+                      }));
+                      notify("시연용 공지 내용을 입력했습니다.");
+                    }}
+                  >
+                    데이터 입력
+                  </button>
+                )}
                 <button
                   type="button"
                   className="admin-secondary"
